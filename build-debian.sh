@@ -1335,7 +1335,7 @@ cd -
 
 cd ${ltspBase}${cpuArch}/
 
-[ -e ${ltspBase}fw/newroot.tar.gz ] && tar xzvf ${ltspBase}fw/newroot.tar.gz
+[ -e ${ltspBase}fw/newroot.tar.gz ] && tar --keep-directory-symlink -xzvf ${ltspBase}fw/newroot.tar.gz
 
 if [ -e ${ltspBase}${cpuArch}/root/board-debs/install-linux.sh ]; then
   true
@@ -1432,6 +1432,8 @@ if [ "${boardModel}" != "onboot" ]; then
   sed -i 's|/usr/local/bin/zy-fw-get-bin|true #/usr/local/bin/zy-fw-get-bin|g' ${ltspBase}${cpuArch}/boot/usb_key_func.sh.2
   sed -i 's|/usr/local/bin/zy-sysdisk-mount|true #/usr/local/bin/zy-sysdisk-mount|g' ${ltspBase}${cpuArch}/debinit.sh
 fi
+
+sed -i 's|tar xzf ${FWOUTPATH}/newroot.tar.gz|tar --keep-directory-symlink -xzf ${FWOUTPATH}/newroot.tar.gz|g' ${ltspBase}${cpuArch}/usr/local/bin/zy-init-get
 
 sed -i 's|^/usr/local/bin/start-md.sh|#/usr/local/bin/start-md.sh|g' ${ltspBase}${cpuArch}/debinit.sh
 sed -i 's|^/usr/local/bin/mount-md.sh|#/usr/local/bin/mount-md.sh|g' ${ltspBase}${cpuArch}/debinit.sh
