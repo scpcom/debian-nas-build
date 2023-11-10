@@ -1,0 +1,287 @@
+#!/bin/sh
+#aptRecommends=--no-install-recommends
+aptRecommends=
+
+sed -i s/'UID_MIN.*1000'/'UID_MIN			  502'/g /etc/login.defs
+sed -i s/'GID_MIN.*1000'/'GID_MIN			  500'/g /etc/login.defs
+
+
+echo " *** upgrade packages ..."
+
+apt-get update
+
+if [ ! -e /usr/sbin/invoke-rc.d.distrib ]; then
+  dpkg-divert --local --rename --add /usr/sbin/invoke-rc.d
+  ln -s /bin/true /usr/sbin/invoke-rc.d
+fi
+
+apt-get upgrade -y
+apt-get dist-upgrade -y
+
+if [ -e /usr/sbin/invoke-rc.d.distrib ]; then
+  rm /usr/sbin/invoke-rc.d
+  dpkg-divert --local --rename --remove /usr/sbin/invoke-rc.d
+fi
+
+
+echo " *** essential and interactive packages ..."
+
+apt-get install -y binutils debconf-i18n debconf-utils whiptail
+
+if [ -e /root/board-debs/debconf-selections.txt ]; then
+  debconf-set-selections < /root/board-debs/debconf-selections.txt
+fi
+
+apt-get install -y xkb-data liblocale-gettext-perl libuuid-perl
+DEBIAN_FRONTEND=noninteractive apt-get install -y kbd
+
+DEBIAN_FRONTEND=noninteractive apt-get install -y console-setup keyboard-configuration
+
+debconf-set-selections < /root/board-debs/debconf-selections-nbd.txt
+
+DEBIAN_FRONTEND=noninteractive apt-get ${aptRecommends} install -y kmod nbd-client
+
+debconf-set-selections < /root/board-debs/debconf-selections-dash.txt
+
+dpkg-reconfigure -f noninteractive dash
+
+apt-get install -y perl-modules
+
+# disabled
+false && apt-get install -y ${aptRecommends} xserver-xorg-input-evdev xserver-xorg-video-fbdev
+
+echo " *** daemon packages ..."
+
+if [ ! -e /usr/sbin/invoke-rc.d.distrib ]; then
+  dpkg-divert --local --rename --add /usr/sbin/invoke-rc.d
+  ln -s /bin/true /usr/sbin/invoke-rc.d
+fi
+
+#postfix	postfix/bad_recipient_delimiter	error	
+#postfix	postfix/not_configured	error	
+
+cat <<\EOFDRUDCP | debconf-set-selections
+postfix	postfix/protocols	select	
+postfix	postfix/rfc1035_violation	boolean	false
+postfix	postfix/destinations	string	
+postfix	postfix/mynetworks	string	127.0.0.0/8 [::ffff:127.0.0.0]/104 [::1]/128
+postfix	postfix/tlsmgr_upgrade_warning	boolean	
+postfix	postfix/relay_restrictions_warning	boolean	
+postfix	postfix/relayhost	string	
+postfix	postfix/mailbox_limit	string	0
+postfix	postfix/recipient_delim	string	+
+postfix	postfix/mydomain_warning	boolean	
+postfix	postfix/kernel_version_warning	boolean	
+postfix	postfix/sqlite_warning	boolean	
+postfix	postfix/procmail	boolean	
+postfix	postfix/retry_upgrade_warning	boolean	
+postfix	postfix/chattr	boolean	false
+postfix	postfix/main_mailer_type	select	No configuration
+postfix	postfix/mailname	string	/etc/mailname
+postfix	postfix/root_address	string	
+proftpd-basic	shared/proftpd/inetd_or_standalone	select	standalone
+EOFDRUDCP
+
+DEBIAN_FRONTEND=noninteractive apt-get install -y bsd-mailx postfix
+
+apt-get install -y ${aptRecommends} anacron at cron logrotate mdadm smartmontools nfs-kernel-server samba winbind
+
+apt-get install -y \
+  attr irqbalance ntp openssh-server samba-common-bin \
+  avahi-daemon snmpd proftpd-basic tftpd-hpa
+
+# not in wheezy
+#apt-get install -y samba-vfs-modules
+
+# disabled
+false && apt-get install -y dbus triggerhappy
+
+if [ -e /usr/sbin/invoke-rc.d.distrib ]; then
+  rm /usr/sbin/invoke-rc.d
+  dpkg-divert --local --rename --remove /usr/sbin/invoke-rc.d
+fi
+
+echo " *** NAS packages ..."
+
+apt-get ${aptRecommends} install -y \
+adduser						 \
+apt						 \
+apt-utils					 \
+base-files					 \
+bash						 \
+bash-completion					 \
+bc						 \
+binutils					 \
+busybox-static					 \
+bzip2						 \
+ca-certificates					 \
+cifs-utils					 \
+cpio						 \
+curl						 \
+dc						 \
+device-tree-compiler				 \
+dnsmasq-base					 \
+dnsutils					 \
+dosfstools					 \
+ed						 \
+eject						 \
+ethtool						 \
+file						 \
+findutils					 \
+ftp						 \
+fuse						 \
+gdbserver					 \
+gettext-base					 \
+gnupg						 \
+gpgv						 \
+hdparm						 \
+ifupdown					 \
+info						 \
+initramfs-tools					 \
+inputattach					 \
+iproute						 \
+iptables					 \
+iputils-arping					 \
+iputils-ping					 \
+iputils-tracepath				 \
+isc-dhcp-client					 \
+kbd						 \
+kmod						 \
+less						 \
+linux-base					 \
+lockfile-progs					 \
+lsb-release					 \
+lshw						 \
+lsof						 \
+lua5.1						 \
+man-db						 \
+mime-support					 \
+nano						 \
+net-tools					 \
+netbase						 \
+netcat-openbsd					 \
+nfs-common					 \
+openssh-client					 \
+p7zip-full					 \
+parted						 \
+patch						 \
+pciutils					 \
+procps						 \
+psmisc						 \
+rdate						 \
+resolvconf					 \
+rsync						 \
+screen						 \
+sdparm						 \
+shared-mime-info				 \
+smbclient					 \
+squashfs-tools					 \
+ssh						 \
+ssl-cert					 \
+strace						 \
+sudo						 \
+sysv-rc						 \
+tcpdump						 \
+telnet						 \
+tftp-hpa					 \
+time						 \
+traceroute					 \
+u-boot-tools					 \
+udev						 \
+udhcpc						 \
+unzip						 \
+usb-modeswitch					 \
+usbutils					 \
+vim						 \
+vim-tiny					 \
+wget						 \
+whiptail					 \
+xz-utils					 \
+zip
+
+# not in wheezy
+#apt-get ${aptRecommends} install -y dmidecode iproute2 kernel-common rename smemcap
+
+# disabled
+false && apt-get ${aptRecommends} install -y \
+dialog						 \
+dns-root-data					 \
+firmware-linux-free				 \
+geoip-database					 \
+krb5-locales					 \
+powermgmt-base					 \
+
+# disabled
+false && apt-get ${aptRecommends} install -y \
+crda						 \
+iw						 \
+wireless-regdb					 \
+wpasupplicant					 \
+
+# disabled
+false && apt-get ${aptRecommends} install -y \
+alsa-base					 \
+alsa-utils					 \
+mesa-vdpau-drivers				 \
+vdpau-va-driver					 \
+x11-common					 \
+x11-xkb-utils					 \
+xdg-user-dirs					 \
+xfonts-base					 \
+xfonts-encodings				 \
+xfonts-utils					 \
+xserver-common					 \
+xserver-xorg					 \
+xserver-xorg-core
+
+
+echo "CONF_SWAPSIZE=100" | tee /etc/dphys-swapfile
+
+apt-get -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" install -y dphys-swapfile
+swapoff /var/swap || true
+rm -f /var/swap
+
+#touch /tmp/dru-swap.done
+
+
+apt-get install -y fake-hwclock i2c-tools mtd-utils uuid-runtime
+
+[ ! -e /bin/nice      ] && ln -s `which nice` /bin/nice
+[ ! -e /sbin/watchdog ] && ln -s `which busybox` /sbin/watchdog
+
+[ ! -e /sbin/flashcp        ] && ln -s `which flashcp`        /sbin/flashcp
+[ ! -e /sbin/flash_erase    ] && ln -s `which flash_erase`    /sbin/flash_erase
+[ ! -e /sbin/flash_eraseall ] && ln -s `which flash_eraseall` /sbin/flash_eraseall
+[ ! -e /sbin/nanddump       ] && ln -s `which nanddump`       /sbin/nanddump
+[ ! -e /sbin/nandwrite      ] && ln -s `which nandwrite`      /sbin/nandwrite
+
+apt-get clean
+
+
+echo " *** user prepare ..."
+
+userGroup=`cat /etc/group |grep ':500:' | cut -d ':' -f 1 2>/dev/null`
+[ x$userGroup != xeveryone ] && groupadd -g 500 everyone
+
+adminUser=`cat /etc/passwd |grep '501:500' | cut -d ':' -f 1 2>/dev/null`
+[ x$adminUser != xadmin ] && useradd -g everyone -s /bin/bash -u 501 admin
+
+mkdir -p /home/admin
+chown admin:everyone /home/admin
+
+#echo "admin ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+
+guestUser=`cat /etc/passwd |grep '502:500' | cut -d ':' -f 1 2>/dev/null`
+[ x$guestUser != xpc-guest    ] && useradd -g everyone -s /usr/sbin/nologin -u 502 pc-guest
+
+ftpUser=`cat /etc/passwd |grep '503:500' | cut -d ':' -f 1 2>/dev/null`
+[ x$ftpUser != xanonymous-ftp ] && useradd -g everyone -s /usr/sbin/nologin -u 503 anonymous-ftp
+
+
+#apt-get install aptitude
+#aptitude install locales
+#aptitude reinstall locales
+
+touch /tmp/`basename $0`.done
+echo "OK"
+

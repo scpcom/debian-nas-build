@@ -1,0 +1,36 @@
+diff -ur a/usr/share/openmediavault/engined/rpc/smart.inc b/usr/share/openmediavault/engined/rpc/smart.inc
+--- a/usr/share/openmediavault/engined/rpc/smart.inc	2016-12-12 20:01:12.000000000 +0100
++++ b/usr/share/openmediavault/engined/rpc/smart.inc	2016-12-27 02:27:36.100642404 +0100
+@@ -83,6 +83,9 @@
+ 			$smartInfo = $sd->getSmartInformation();
+ 			// Try to get the device temperature via S.M.A.R.T.
+ 			$temperature = $smartInfo->getTemperature();
++			// Try to get the device serial number via S.M.A.R.T.
++			//$serialnumber = $sd->getSerialNumber();
++			$serialnumber = $smartInfo->getInformation()['serialnumber'];
+ 			// Prepare device object
+ 			$objects[] = [
+ 				"devicename" => $sd->getDeviceName(),
+@@ -94,7 +97,7 @@
+ 				  "" : sprintf("%d°C", $temperature),
+ 				"description" => $sd->getDescription(),
+ 				"vendor" => $sd->getVendor(),
+-				"serialnumber" => $sd->getSerialNumber(),
++				"serialnumber" => $serialnumber,
+ 				"overallstatus" => $smartInfo->getOverallStatus()
+ 			];
+ 		}
+diff -ur a/usr/share/php/openmediavault/system/storage/smartinformation.inc b/usr/share/php/openmediavault/system/storage/smartinformation.inc
+--- a/usr/share/php/openmediavault/system/storage/smartinformation.inc	2016-11-04 21:48:20.000000000 +0100
++++ b/usr/share/php/openmediavault/system/storage/smartinformation.inc	2016-12-27 01:55:48.707438431 +0100
+@@ -156,8 +156,8 @@
+ 		// Bit 0: Command line did not parse
+ 		// Bit 1: Device open failed, or device did not return an
+ 		//        IDENTIFY DEVICE structure
+-		if (($exitCode !== 0) && (($exitCode & 0) || ($exitCode & 1)))
+-			throw new \OMV\ExecException($cmd->getCommandLine(), $output);
++		//if (($exitCode !== 0) && (($exitCode & 0) || ($exitCode & 1)))
++		//	throw new \OMV\ExecException($cmd->getCommandLine(), $output);
+ 		$this->cmdOutput = $output;
+ 
+ 		// Set flag to mark information has been successfully read.

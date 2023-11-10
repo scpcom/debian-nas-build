@@ -1,0 +1,142 @@
+#!/bin/sh
+aptRecommends=--no-install-recommends
+#aptRecommends=
+
+echo " *** omv essential packages ..."
+
+apt-get install -y \
+  apt-transport-https beep btrfs-tools gdisk ifenslave jfsutils ntfs-3g openssh-blacklist-extra pm-utils \
+  quota quotatool rrdtool socat uuid wpasupplicant xfsprogs xmlstarlet
+
+#apt-get install -y dialog iso-codes lksctp-tools policykit-1 x11-common
+
+apt-get install -y \
+  libpam-modules libsasl2-modules libjson-perl liblocale-po-perl libjavascript-minifier-xs-perl \
+  php5-cgi php5-cli \
+  python3-dbus python3 python3-apt python3-pyudev
+
+# not in wheezy
+apt-get install -y python3-dialog python3-natsort python3-netifaces
+
+#apt-get install -y default-jre-headless
+
+
+echo " *** omv daemon packages ..."
+
+dpkg-divert --local --rename --add /usr/sbin/invoke-rc.d
+ln -s /bin/true /usr/sbin/invoke-rc.d
+
+#apt-get install -y --reinstall dbus
+
+apt-get install -y acpid cpufrequtils dmeventd lvm2 monit rrdcached rsyslog
+#libnss-mdns 
+#apt-get install -y sane-utils
+apt-get install -y nginx php5-fpm
+
+apt-get install -y \
+  libesmtp6 liblvm2app2.2 libmodbus5 liboping0 libprotobuf-c1 \
+  librabbitmq1 libupsclient4 libyajl2
+
+apt-get install -y --no-install-recommends libnotify4
+apt-get install -y ${aptRecommends} collectd
+
+
+echo " *** omv repo packages ..."
+
+#echo "deb http://packages.openmediavault.org/public stoneburner main" | tee /etc/apt/sources.list.d/openmediavault.list
+echo "deb http://packages.openmediavault.org/public erasmus main" | tee /etc/apt/sources.list.d/openmediavault.list
+
+apt-key adv --keyserver keyserver.ubuntu.com --recv 7E7A6C592EF35D13
+
+apt-get update
+
+apt-get install -y libjs-extjs5 php5-pam
+#apt-get install -y proftpd-mod-vroot
+
+apt-get clean
+
+
+echo " *** omv systemd fixes ..."
+
+cat <<\EOFDRUSCS | tee /bin/systemctl.druic > /dev/null
+#!/bin/sh
+echo "$0 $*" >> /var/log/systemctl-stub.log
+n=`basename $0`
+if [ "x$n" = "xsystemctl" ]; then
+ if [ "x$1" = "xstart" -o "x$1" = "xrestart" -o "x$1" = "xstop" ]; then
+   d=`echo $2 | cut -d . -f1`
+   t=`echo $2 | cut -d . -f2`
+   if [ x$t = xservice ]; then
+      /usr/sbin/invoke-rc.d ${d} $1
+   elif [ -e "/etc/init.d/${d}" ]; then
+      /usr/sbin/invoke-rc.d ${d} $1
+   fi
+ elif [ "x$1" = "xis-active" ]; then
+   d=$2
+   /usr/sbin/invoke-rc.d ${d} status
+ elif [ "x$1" = "xenable" ]; then
+   d=$2
+   if [ -e "/etc/init.d/${d}" ]; then
+     /usr/sbin/update-rc.d ${d} defaults
+   fi
+ elif [ "x$1" = "xdisable" ]; then
+   d=$2
+   if [ -e "/etc/init.d/${d}" ]; then
+     /usr/sbin/update-rc.d ${d} remove
+   fi
+ fi
+elif [ "x$n" = "xrunlevel" ]; then
+  if [ -e /tmp/.dru-boot.done ]; then
+    echo "N 2"
+  else
+    echo "unknown"
+    exit 1
+  fi
+elif [ "x$n" = "xshutdown" ]; then
+  if [ "x$*" = "x-h -P now" -o "x$*" = "x-h now" ]; then
+    /sbin/halt
+  elif [ "x$*" = "x-r now" ]; then
+    /sbin/reboot
+  fi
+fi
+EOFDRUSCS
+
+chmod ugo+rx /bin/systemctl.druic
+
+apt-get install -y systemd-shim
+
+
+echo " *** omv main and interactive packages ..."
+
+cd /
+tar xzvf /root/source/openmediavault-init-scripts.tar.gz
+cd -
+
+DEBIAN_FRONTEND=noninteractive apt-get install -y openmediavault openmediavault-lvm2
+
+mkdir -p /usr/share/openmediavault/initsystem.disabled
+for s in 60rootfs 65mdadm 90sysctl 99rrd ; do
+  if [ -e /usr/share/openmediavault/initsystem/$s ]; then
+    mv /usr/share/openmediavault/initsystem/$s /usr/share/openmediavault/initsystem.disabled/
+  fi
+done
+
+#rm -f /usr/share/openmediavault/initsystem/60rootfs
+#rm -f /usr/share/openmediavault/initsystem/65mdadm
+#rm -f /usr/share/openmediavault/initsystem/90sysctl
+#rm -f /usr/share/openmediavault/initsystem/99rrd
+rm -f /usr/share/openmediavault/mkconf/sysctl.d/nonrot
+
+sed -i s/'eth|wlan'/'eth|egiga|wlan'/g /usr/share/openmediavault/initsystem/40interfaces
+
+sed -i s/'"UID_MIN", 1000'/'"UID_MIN", 502'/g /usr/share/php/openmediavault/system/user.inc
+sed -i s/'"GID_MIN", 1000'/'"GID_MIN", 500'/g /usr/share/php/openmediavault/system/group.inc
+sed -i s/'eth|venet'/'eth|egiga|venet'/g /usr/share/php/openmediavault/system/net/networkinterfacebackend/ethernet.inc
+
+rm /usr/sbin/invoke-rc.d
+dpkg-divert --local --rename --remove /usr/sbin/invoke-rc.d
+
+apt-get clean
+
+touch /tmp/`basename $0`.done
+echo "OK"

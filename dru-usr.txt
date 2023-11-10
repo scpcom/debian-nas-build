@@ -1,0 +1,68 @@
+#!/bin/sh
+
+echo " *** users ..."
+
+userGroup=`cat /etc/group |grep ':500:' | cut -d ':' -f 1 2>/dev/null`
+[ x$userGroup != xeveryone ] && groupadd -g 500 everyone
+
+echo " *** user admin ..."
+adminUser=`cat /etc/passwd |grep '501:500' | cut -d ':' -f 1 2>/dev/null`
+[ x$adminUser != xadmin ] && useradd -g everyone -s /bin/bash -u 501 admin
+
+adminUser=admin
+usermod -a -G adm,dialout,fax,cdrom,floppy,tape,audio,dip,video,plugdev ${adminUser}
+
+cat /etc/group | grep ssh    >/dev/null && usermod -a -G ssh    ${adminUser}
+cat /etc/group | grep sudo   >/dev/null && usermod -a -G sudo   ${adminUser}
+cat /etc/group | grep games  >/dev/null && usermod -a -G games  ${adminUser}
+cat /etc/group | grep users  >/dev/null && usermod -a -G users  ${adminUser}
+
+cat /etc/group | grep fuse   >/dev/null && usermod -a -G fuse   ${adminUser}
+cat /etc/group | grep netdev >/dev/null && usermod -a -G netdev ${adminUser}
+
+echo "password"
+passwd admin || true
+#smbpasswd -a admin || true
+
+mkdir -p /home/admin
+chown admin:everyone /home/admin
+
+grep 'admin ALL' /etc/sudoers || echo "admin ALL=(ALL) NOPASSWD: ALL" | tee -a /etc/sudoers
+
+guestUser=`cat /etc/passwd |grep '502:500' | cut -d ':' -f 1 2>/dev/null`
+[ x$guestUser != xpc-guest    ] && useradd -g everyone -s /usr/sbin/nologin -u 502 pc-guest
+
+ftpUser=`cat /etc/passwd |grep '503:500' | cut -d ':' -f 1 2>/dev/null`
+[ x$ftpUser != xanonymous-ftp ] && useradd -g everyone -s /usr/sbin/nologin -u 503 anonymous-ftp
+
+firstUser=`cat /etc/passwd |grep '504:500' | cut -d ':' -f 1 2>/dev/null`
+if [ x$firstUser = x ]; then
+  echo -n " *** share user: "
+  read firstUser
+
+  if [ x$firstUser != x ]; then
+    while cat /etc/passwd | grep "${firstUser}:x:" > /dev/null ; do
+      echo "user $firstUser already exists."
+      echo -n "share user: "
+      read firstUser
+    done
+  fi
+
+  if [ x$firstUser != x ]; then
+    echo " *** user $firstUser ..."
+    useradd -g everyone -u 504 $firstUser
+  fi
+else
+  echo " *** user $firstUser ..."
+fi
+
+if [ x$firstUser != x ]; then
+  usermod -G users,everyone -a $firstUser
+  echo "password"
+  passwd $firstUser || true
+  echo "samba share password"
+  smbpasswd -a $firstUser || true
+fi
+
+touch /tmp/`basename $0`.done
+echo "OK"

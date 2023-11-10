@@ -1,0 +1,159 @@
+#!/bin/sh
+SCRIPTDIR=`dirname $0`
+cd "${SCRIPTDIR}" ; SCRIPTDIR=`pwd` ; cd - > /dev/null
+
+FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.11(AATB.3)C0.zip"
+FWOUTPATH=/mnt/ram1
+
+FW_LOG="/tmp/fw_extract.log"
+FWUPGREADE_TMP="/tmp/fwupgrade"
+PROGRESS_LOG="${FWUPGREADE_TMP}/fwlog"
+
+INFOPATH="/firmware/mnt/info"
+NANDPATH="/firmware/mnt/sysdisk2"
+
+SWAPFILE=${NANDPATH}/swap_ul6545p
+
+if [ -n "$2" ]; then
+        FWOUTPATH=$2
+fi
+
+if [ -n "$3" ]; then
+        FWGETURL=$3
+fi
+
+ROM_FILE="${FWOUTPATH}/ras.bin"
+
+if [ -n "$1" ]; then
+        [ "$1" != "-" ] && ROM_FILE=$1
+fi
+
+#mount -o bind /newroot/mnt /mnt
+
+#[ ! -e /sbin/bin2ram   ] && cp -p /oldroot/sbin/bin2ram   /sbin/
+#[ ! -e /sbin/fw_unpack ] && cp -p /oldroot/sbin/fw_unpack /sbin/
+
+mkdir -p "${FWOUTPATH}"
+#mkdir -p /mnt/ram2
+
+cd "${FWOUTPATH}" ; FWOUTPATH=`pwd` ; cd - > /dev/null
+
+if [ ! -e "${ROM_FILE}" ]; then
+  cd ${FWOUTPATH}/
+  wget -N "${FWGETURL}"
+  unzip *.zip *.bin
+  cd - > /dev/null
+  mv "${FWOUTPATH}/"*.bin "${ROM_FILE}"
+fi
+
+# Unpacked file is at ${FWOUTPATH}.
+#
+# DATA_0000: header version
+# DATA_0001: firmware version
+# DATA_0002: firmware revision
+# DATA_0101: model number 1
+# DATA_0102: model number 2
+
+# DATA_0200: core checksum
+# DATA_0201: ZLD checksum; in NSA-310, it is the md5sum of sysdisk.img.gz
+# DATA_0202: ROM checksum
+# DATA_0203: InitRD checksum; there is no InitRD in NSA-310
+# DATA_0204: IMG checksum; in NSA-310, it is the md5sum of sysdisk.img
+
+# DATA_1000: kernel file, uImage
+# DATA_1002: InitRD image, initrd.img.gz
+# DATA_1004: System disk image, sysdisk.img.gz
+
+# DATA_a000: executable, for some jobs before firmware upgrade
+# DATA_a002: executable, for some jobs after firmware upgrade
+
+#if [ -e "${ROM_FILE}" -a ! -e /mnt/ram2/tlv.bin ]; then
+#  /sbin/bin2ram little "${ROM_FILE}" /mnt/ram2/tlv.bin
+#fi
+
+#if [ -e /mnt/ram2/tlv.bin -a ! -e ${FWOUTPATH}/sysdisk.img.gz ]; then
+#  #rm -f "${ROM_FILE}"
+#
+#  /sbin/fw_unpack -C ${FWOUTPATH} -i /mnt/ram2/tlv.bin > /dev/null 2>&1
+#fi
+
+if [ -e "${ROM_FILE}" -a ! -e ${FWOUTPATH}/sysdisk.img.gz ]; then
+  python ${SCRIPTDIR}/zy-fw-unpack.py "${ROM_FILE}" ${FWOUTPATH}
+fi
+
+if [ -e ${FWOUTPATH}/DATA_0101 ]; then
+  #rm -f /mnt/ram2/tlv.bin
+
+  cd ${FWOUTPATH}/
+  mv DATA_0000 header.version
+  mv DATA_0001 firmware.version
+  mv DATA_0002 firmware.revision
+
+  mv DATA_0101 model.number
+  #mv DATA_0102 model.number2
+
+  mv DATA_0200 uImage.md5
+  mv DATA_0201 sysdisk.img.gz.md5
+  #mv DATA_0203 initrd.img.gz.md5
+  mv DATA_0204 sysdisk.img.md5
+
+  mv DATA_1000 uImage
+  #mv DATA_1002 initrd.img.gz
+  mv DATA_1004 sysdisk.img.gz
+
+  mv DATA_a000 pre-fw-upgrade.sh
+  mv DATA_a002 post-fw-upgrade.sh
+  cd - > /dev/null
+fi
+
+if [ -e ${FWOUTPATH}/model.number ]; then
+  #board_model=`/firmware/sbin/mrd_model -p`
+  file_model=`cat ${FWOUTPATH}/model.number`
+
+  #CURR_FW_REV=`cat /firmware/mnt/info/revision`
+  NEW_FW_REV=`cat ${FWOUTPATH}/firmware.revision`
+
+  NEW_FW_VER=`cat ${FWOUTPATH}/firmware.version`
+
+  echo "new firmware: ${NEW_FW_VER} rev ${NEW_FW_REV} for ${file_model}"
+fi
+
+if [ -e ${FWOUTPATH}/sysdisk.img.gz -a ! -e ${FWOUTPATH}/sysdisk.img ]; then
+  gzip -cd ${FWOUTPATH}/sysdisk.img.gz > ${FWOUTPATH}/sysdisk.img
+fi
+
+if [ -e ${FWOUTPATH}/uImage -a ! -e ${FWOUTPATH}/vmlinuz_unpacked ]; then
+  cd "${FWOUTPATH}/"
+  if file uImage | grep 'u-boot legacy uImage' ; then
+    tail -c+65 < uImage > vmlinuz
+  else
+    cp -p uImage vmlinuz
+  fi
+  ${SCRIPTDIR}/repack-zImage.sh -u vmlinuz
+  cd - > /dev/null
+fi
+
+if [ -e ${FWOUTPATH}/vmlinuz_unpacked/initramfs/etc/profile ]; then
+  cd "${FWOUTPATH}/vmlinuz_unpacked/initramfs/"
+  sudo tar czf ../../initramfs.tar.gz .
+  sudo chmod ugo+rw ../../initramfs.tar.gz
+  cd - > /dev/null
+
+  sudo ${SCRIPTDIR}/zy-fw-get-bin "${FWOUTPATH}/vmlinuz_unpacked/initramfs"
+  cd "${FWOUTPATH}/vmlinuz_unpacked/initramfs/newroot"
+  sudo tar czf ../../../newroot.tar.gz .
+  sudo chmod ugo+rw ../../../newroot.tar.gz
+  cd - > /dev/null
+
+  sudo rm -rf ${FWOUTPATH}/vmlinuz_unpacked/initramfs/
+fi
+
+if [ -e ${FWOUTPATH}/sysdisk.img ]; then
+  mkdir -p "${FWOUTPATH}/mount"
+  sudo mount -o loop,ro "${FWOUTPATH}/sysdisk.img" "${FWOUTPATH}/mount"
+  cd "${FWOUTPATH}/mount"
+  sudo tar czf ../modules.tar.gz lib/modules
+  sudo chmod ugo+rw ../modules.tar.gz
+  cd - > /dev/null
+  sudo umount "${FWOUTPATH}/mount"
+fi

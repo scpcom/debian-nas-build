@@ -1,0 +1,61 @@
+#!/bin/sh
+IRDROOT=$1
+NEWROOT=$1/newroot
+
+#mkdir ${NEWROOT}
+#mount -o noatime,nodiratime,errors=remount-ro ${pkp/1/2} ${NEWROOT}
+
+mkdir -p ${NEWROOT}/oldroot
+
+mkdir -p ${NEWROOT}/dev
+mkdir -p ${NEWROOT}/etc
+mkdir -p ${NEWROOT}/lib/firmware
+mkdir -p ${NEWROOT}/lib/modules
+mkdir -p ${NEWROOT}/sbin
+mkdir -p ${NEWROOT}/usr/local/bin
+
+cp -a ${IRDROOT}/dev/. ${NEWROOT}/dev/
+
+if [ ! -e ${NEWROOT}/usr/local/bin/zy-rcS ]; then
+  cp -p ${IRDROOT}/etc/init.d/rcS ${NEWROOT}/usr/local/bin/zy-rcS
+  sed -i s/' == '/' = '/g ${NEWROOT}/usr/local/bin/zy-rcS
+  sed -i 's|etc/profile|etc/zy-profile|g' ${NEWROOT}/usr/local/bin/zy-rcS
+  sed -i s/'check_and_run_usbkey'/'#check_and_run_usbkey'/g ${NEWROOT}/usr/local/bin/zy-rcS
+  sed -i s/'#check_and_run_usbkey()'/'check_and_run_usbkey()'/g ${NEWROOT}/usr/local/bin/zy-rcS
+fi
+
+[ ! -e ${NEWROOT}/etc/zy-profile ] && cp -p ${IRDROOT}/etc/profile ${NEWROOT}/etc/zy-profile
+[ ! -e ${NEWROOT}/zy-init        ] && cp -p ${IRDROOT}/init ${NEWROOT}/zy-init
+
+cp -ap ${IRDROOT}/etc/settings   ${NEWROOT}/etc/
+cp -ap ${IRDROOT}/firmware       ${NEWROOT}/
+cp -ap ${IRDROOT}/ram_bin        ${NEWROOT}/
+cp -ap ${IRDROOT}/lib/firmware/. ${NEWROOT}/lib/firmware/
+cp -ap ${IRDROOT}/lib/modules/.  ${NEWROOT}/lib/modules/
+cp -p ${IRDROOT}/lib/libzy*      ${NEWROOT}/lib/
+
+cp -p ${IRDROOT}/firmware/sbin/bareboxenv ${NEWROOT}/sbin/
+cp -p ${IRDROOT}/firmware/sbin/mmiotool   ${NEWROOT}/sbin/
+
+#cp -p ${IRDROOT}/sbin/flash_erase ${NEWROOT}/sbin/
+#cp -p ${IRDROOT}/sbin/flashcp     ${NEWROOT}/sbin/
+#cp -p ${IRDROOT}/sbin/nanddump    ${NEWROOT}/sbin/
+#cp -p ${IRDROOT}/sbin/nandwrite   ${NEWROOT}/sbin/
+
+cp -p ${IRDROOT}/sbin/buzzerc   ${NEWROOT}/sbin/
+cp -p ${IRDROOT}/sbin/setLED    ${NEWROOT}/sbin/
+cp -p ${IRDROOT}/sbin/getLED    ${NEWROOT}/sbin/
+cp -p ${IRDROOT}/sbin/get_mac_mcu.sh   ${NEWROOT}/sbin/
+cp -p ${IRDROOT}/sbin/write_mac_mcu.sh ${NEWROOT}/sbin/
+#cp -p ${IRDROOT}/sbin/egiga_*.sh       ${NEWROOT}/sbin/
+#cp -p ${IRDROOT}/sbin/fwupgrade_*.sh   ${NEWROOT}/sbin/
+#cp -p ${IRDROOT}/sbin/ntpdate_sync.sh  ${NEWROOT}/sbin/
+#cp -p ${IRDROOT}/sbin/zysh.sh          ${NEWROOT}/sbin/
+
+tar c -C ${IRDROOT} bin etc lib sbin usr var | tar x -C ${NEWROOT}/oldroot/
+cp -p ${IRDROOT}/init ${NEWROOT}/oldroot/
+cp -p ${IRDROOT}/linuxrc ${NEWROOT}/oldroot/
+
+rm -f ${NEWROOT}/oldroot/bin/fdisk ${NEWROOT}/oldroot/bin/ip
+rm -f ${NEWROOT}/oldroot/sbin/ethtool ${NEWROOT}/oldroot/sbin/mdadm ${NEWROOT}/oldroot/sbin/start-stop-daemon ${NEWROOT}/oldroot/sbin/uuidgen
+rm -f ${NEWROOT}/oldroot/sbin/flash*  ${NEWROOT}/oldroot/sbin/nand* ${NEWROOT}/oldroot/sbin/ubi*
