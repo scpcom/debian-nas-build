@@ -66,11 +66,29 @@ apt-get install -y ${aptRecommends} collectd
 
 
 #cat /etc/debian_version
+distDeb=stretch
 distOmv=arrakis
-if grep jessie /etc/apt/sources.list > /dev/null ; then
+versOmv=4
+if grep bullseye /etc/apt/sources.list > /dev/null ; then
+  distDeb=bullseye
+  distOmv=shaitan
+  versOmv=6
+elif grep buster /etc/apt/sources.list > /dev/null ; then
+  distDeb=buster
+  distOmv=usul
+  versOmv=5
+elif grep stretch /etc/apt/sources.list > /dev/null ; then
+  distDeb=stretch
+  distOmv=arrakis
+  versOmv=4
+elif grep jessie /etc/apt/sources.list > /dev/null ; then
+  distDeb=jessie
   distOmv=erasmus
+  versOmv=3
 elif grep wheezy /etc/apt/sources.list > /dev/null ; then
+  distDeb=wheezy
   distOmv=stoneburner
+  versOmv=2
 fi
 
 if [ ! -e /etc/apt/sources.list.d/openmediavault.list ]; then
@@ -149,9 +167,7 @@ EOFDRUSCS
 
 chmod ugo+rx /bin/systemctl.druic
 
-if [ $distOmv = erasmus ]; then
-  apt-get install -y systemd-shim
-elif [ $distOmv = stoneburner ]; then
+if [ $versOmv -lt 4 ]; then
   apt-get install -y systemd-shim
 else
   apt-get install -y systemd-sysv
@@ -166,24 +182,33 @@ cd -
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y openmediavault openmediavault-lvm2 || DEBIAN_FRONTEND=noninteractive apt-get install -y openmediavault
 
-omvedeb=openmediavault-omvextrasorg_latest_all4.deb
-if [ $distOmv = erasmus ]; then
-  omvedeb=openmediavault-omvextrasorg_latest_all3.deb
-elif [ $distOmv = stoneburner ]; then
+omvedeb=openmediavault-omvextrasorg_latest_all${versOmv}.deb
+if [ $versOmv -lt 3 ]; then
   omvedeb=openmediavault-omvextrasorg_latest_all.deb
 fi
 
 if [ ! -e /root/source/${omvedeb} ]; then
   cd /root/source/
-  wget -N http://omv-extras.org/${omvedeb}
+  if [ ${versOmv} -lt 4 ]; then
+    wget -N http://omv-extras.org/${omvedeb}
+  else
+    wget -N https://github.com/OpenMediaVault-Plugin-Developers/packages/raw/master/${omvedeb}
+  fi
   dpkg -i ${omvedeb}
   cd -
+
+  if grep -q dl.bintray.com /etc/apt/sources.list.d/omv-extras-org.list ; then
+    sed -i "s|https://dl.bintray.com/openmediavault-plugin-developers/${distOmv} ${distDeb}|https://openmediavault-plugin-developers.github.io/packages/debian ${distOmv}|g" /etc/apt/sources.list.d/omv-extras-org.list
+    wget -O - https://openmediavault-plugin-developers.github.io/packages/debian/omvextras2026.asc | apt-key add -
+  fi
 
   apt-get update
 fi
 
 cat <<\EOFDRUOMVP | tee /usr/local/bin/dru-omv-patch > /dev/null
 #!/bin/sh
+sed -i 's|\[ $(cat "/sys/class/net/\${iface}/operstate") != "up" \]|false|g' /usr/share/openmediavault/mkconf/issue
+
 mkdir -p /usr/share/openmediavault/initsystem.disabled
 for s in 60rootfs 65mdadm 90sysctl 99rrd ; do
   if [ -e /usr/share/openmediavault/initsystem/$s ]; then
