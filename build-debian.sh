@@ -13,6 +13,7 @@ distBrand=Debian
 #distName=wheezy
 distName=jessie
 distURL=http://ftp.us.debian.org/debian
+secuURL=http://security.debian.org
 imageName=debian-nas
 mainRepo="main"
 moreRepo="main contrib non-free"
@@ -471,6 +472,7 @@ case ${boardModel} in
     nsa310s) FWNEWVER="4.75(AALH.1)" ;;
     nsa320s) FWNEWVER="4.75(AANV.1)" ;;
     nsa325)  FWNEWVER="4.81" ;;
+    nas326)  FWNEWVER="5.21" ;;
 esac
 
 if [ "${boardModel}" != "onboot" -a "${boardModel}" != "nas5xx" ]; then
@@ -595,6 +597,11 @@ cat <<EOFASLU | tee -a ${ltspBase}${cpuArch}/etc/apt/sources.list
 deb ${distURL}/ ${distName}-updates ${moreRepo}
 #deb-src ${distURL}/ ${distName}-updates ${moreRepo}
 EOFASLU
+
+cat <<EOFASLS | tee -a ${ltspBase}${cpuArch}/etc/apt/sources.list
+deb ${secuURL}/ ${distName}/updates main contrib non-free
+#deb-src ${secuURL}/ ${distName}/updates main contrib non-free
+EOFASLS
 
 touch ${ltspBase}${cpuArch}/tmp/repositories.done
 
@@ -1133,7 +1140,8 @@ else
     nsa310s) FWGETURL="ftp://ftp.zyxel.com/NSA310S/firmware/NSA310S_V4.75(AALH.1)C0.zip" ;;
     nsa320s) FWGETURL="ftp://ftp.zyxel.com/NSA320S/firmware/NSA320S_V4.75(AANV.1)C0.zip" ;;
     nsa325)  FWGETURL="ftp://ftp.zyxel.com/NSA325/firmware/NSA325_V4.81(AAAJ.0)C0.zip" ;;
-    nas326)  FWGETURL="ftp://ftp.zyxel.com/NAS326/firmware/NAS326_V5.20(AAZF.1)C0.zip" ;;
+#    nas326)  FWGETURL="ftp://ftp.zyxel.com/NAS326/firmware/NAS326_V5.20(AAZF.1)C0.zip" ;;
+    nas326)  FWGETURL="ftp://ftp.zyxel.com/NAS326/firmware/NAS326_V5.21(AAZF.0)C0.zip" ;;
     nas520)  FWGETURL="ftp://ftp.zyxel.com/NAS520/firmware/NAS520_V5.20(AASZ.0)C0.zip" ;;
     nas540)  FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.20(AATB.0)C0.zip" ;;
     nas542)  FWGETURL="ftp://ftp.zyxel.com/NAS542/firmware/NAS542_V5.20(ABAG.1)C0.zip" ;;
