@@ -21,16 +21,20 @@ diff -ur a/usr/share/openmediavault/engined/rpc/smart.inc b/usr/share/openmediav
  			];
  		}
 diff -ur a/usr/share/php/openmediavault/system/storage/smartinformation.inc b/usr/share/php/openmediavault/system/storage/smartinformation.inc
---- a/usr/share/php/openmediavault/system/storage/smartinformation.inc	2016-11-04 21:48:20.000000000 +0100
-+++ b/usr/share/php/openmediavault/system/storage/smartinformation.inc	2016-12-27 01:55:48.707438431 +0100
-@@ -156,8 +156,8 @@
+--- a/usr/share/php/openmediavault/system/storage/smartinformation.inc	2017-03-09 04:37:39.000000000 +0100
++++ b/usr/share/php/openmediavault/system/storage/smartinformation.inc	2017-03-09 04:42:42.000000000 +0100
+@@ -157,10 +157,10 @@
  		// Bit 0: Command line did not parse
  		// Bit 1: Device open failed, or device did not return an
  		//        IDENTIFY DEVICE structure
--		if (($exitCode !== 0) && (($exitCode & 0) || ($exitCode & 1)))
--			throw new \OMV\ExecException($cmd->getCommandLine(), $output);
-+		//if (($exitCode !== 0) && (($exitCode & 0) || ($exitCode & 1)))
-+		//	throw new \OMV\ExecException($cmd->getCommandLine(), $output);
+-		if (($exitStatus !== 0) && (($exitStatus & 0) || ($exitStatus & 1))) {
+-			throw new \OMV\ExecException($cmd->getCommandLine(), $output,
+-				$exitStatus);
+-		}
++		//if (($exitStatus !== 0) && (($exitStatus & 0) || ($exitStatus & 1))) {
++		//	throw new \OMV\ExecException($cmd->getCommandLine(), $output,
++		//		$exitStatus);
++		//}
  		$this->cmdOutput = $output;
  
  		// Set flag to mark information has been successfully read.

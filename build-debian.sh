@@ -29,6 +29,16 @@ imageEth1Mask=255.255.255.0
 imageRouter=192.168.1.1
 imageDNS=192.168.1.1
 
+installRecommends=1
+installISCSITarget=0
+installMailServer=1
+installNFSServer=1
+installSMBServer=1
+installMiscServer=1
+installWifi=0
+installIpmitool=0
+installSmartctl=1
+
 distBrandLower=`echo $distBrand | tr A-Z a-z`
 
 if [ $cpuArch = amd64 -o $cpuArch = i386 ]; then
@@ -259,6 +269,130 @@ EOF
     fi
 }
 
+UpdateConfig() {
+  true
+}
+
+askClientOpt() {
+  EXTRAOPT=$(whiptail --title "Image Creator $version Extra Options" --cancel-button "Quit" --ok-button "Select" --checklist "What components would you like to use?" 22 80 10 \
+    "aptrecommends" "Install Recommends" $installRecommends \
+    "iscsitarget" "iSCSI Target" $installISCSITarget \
+    "mailserver" "Mail Server" $installMailServer \
+    "nfsserver" "NFS Server" $installNFSServer \
+    "smbserver" "SMB Server" $installSMBServer \
+    "miscserver" "Avahi/SNMP/FTP/TFTP Server" $installMiscServer \
+    "wifi" "WiFi/WLAN" $installWifi \
+    "ipmitool" "IPMI Tool" $installIpmitool \
+    "smartctl" "S.M.A.R.T. Monitoring Tools" $installSmartctl \
+    3>&1 1>&2 2>&3)
+  r=$?
+
+  if [ $r = 0 ]; then
+    installRecommends=0
+    UpdateConfig installRecommends $installRecommends
+    installISCSITarget=0
+    UpdateConfig installISCSITarget $installISCSITarget
+    installMailServer=0
+    UpdateConfig installMailServer $installMailServer
+    installNFSServer=0
+    UpdateConfig installNFSServer $installNFSServer
+    installSMBServer=0
+    UpdateConfig installSMBServer $installSMBServer
+    installMiscServer=0
+    UpdateConfig installMiscServer $installMiscServer
+    installWifi=0
+    UpdateConfig installWifi $installWifi
+    installIpmitool=0
+    UpdateConfig installIpmitool $installIpmitool
+    installSmartctl=0
+    UpdateConfig installSmartctl $installSmartctl
+
+    for o in $EXTRAOPT ; do
+        case ${o} in
+            \"aptrecommends\")
+                installRecommends=1
+                UpdateConfig installRecommends $installRecommends
+                echo enable $o 
+                ;;
+            \"iscsitarget\")
+                installISCSITarget=1
+                UpdateConfig installISCSITarget $installISCSITarget
+                echo enable $o 
+                ;;
+            \"mailserver\")
+                installMailServer=1
+                UpdateConfig installMailServer $installMailServer
+                echo enable $o 
+                ;;
+            \"nfsserver\")
+                installNFSServer=1
+                UpdateConfig installNFSServer $installNFSServer
+                echo enable $o 
+                ;;
+            \"smbserver\")
+                installSMBServer=1
+                UpdateConfig installSMBServer $installSMBServer
+                echo enable $o 
+                ;;
+            \"miscserver\")
+                installMiscServer=1
+                UpdateConfig installMiscServer $installMiscServer
+                echo enable $o 
+                ;;
+            \"wifi\")
+                installWifi=1
+                UpdateConfig installWifi $installWifi
+                echo enable $o 
+                ;;
+            \"ipmitool\")
+                installIpmitool=1
+                UpdateConfig installIpmitool $installIpmitool
+                echo enable $o 
+                ;;
+            \"smartctl\")
+                installSmartctl=1
+                UpdateConfig installSmartctl $installSmartctl
+                echo enable $o 
+                ;;
+            *)
+                echo what?
+        esac
+    done
+  fi
+}
+
+WriteConfigFile() {
+  cat <<EOFDRUBCF | tee ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf
+boardModel=${boardModel}
+FWGETURL="${FWGETURL}"
+FWUSEVER="${FWUSEVER}"
+fanSpeed=${fanSpeed}
+firstUser=${firstUser}
+imageMdMount=${imageMdMount}
+imageOmv=${imageOmv}
+imageOmvInit=${imageOmvInit}
+imageHostname=${imageHostname}
+imageEth0Ip=${imageEth0Ip}
+imageEth0Mask=${imageEth0Mask}
+imageEth1Ip=${imageEth1Ip}
+imageEth1Mask=${imageEth1Mask}
+imageRouter=${imageRouter}
+imageDNS=${imageDNS}
+installRecommends=${installRecommends}
+installISCSITarget=${installISCSITarget}
+installMailServer=${installMailServer}
+installNFSServer=${installNFSServer}
+installSMBServer=${installSMBServer}
+installMiscServer=${installMiscServer}
+installWifi=${installWifi}
+installIpmitool=${installIpmitool}
+installSmartctl=${installSmartctl}
+EOFDRUBCF
+
+  mkdir -p ${ltspBase}etc
+  cp -p ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf ${ltspBase}etc/
+}
+
 
 # ---- main ----
 
@@ -394,6 +528,14 @@ else
 fi
 
 if ${imageOmv} = true ]; then
+  installRecommends=1
+  installISCSITarget=1
+  installMailServer=1
+  installNFSServer=1
+  installSMBServer=1
+  installMiscServer=1
+  installSmartctl=1
+
   omviDefault="--defaultno"
   if ${imageOmvInit} = true ]; then
   omviDefault=""
@@ -407,7 +549,11 @@ if ${imageOmv} = true ]; then
   else
   	imageOmvInit=false
   fi
+
+else
+  askClientOpt
 fi
+
 
 
 if [ ! -e ${ltspBase}${cpuArch}/tmp/debootstrap.done ]; then
@@ -578,6 +724,8 @@ EOFDRUDCSD
 
 echo " *** install packages ..."
 
+WriteConfigFile
+
 chroot ${ltspBase}${cpuArch} mount -t proc /proc /proc
 
 mkdir -p ${ltspBase}${cpuArch}/root/bin
@@ -667,6 +815,31 @@ if [ "${cpuArch:0:3}" != "arm" ]; then
 	tar xzvf ${ltspBase}archives/${boardName}-bootloader-${cpuArch}.tar.gz
 	cd -
 fi
+
+
+for z in `ls ${ltspBase}archives/linux-bsp-*-${cpuArch}.zip` ; do
+  zd=`basename ${z}`
+  zd=${zd/linux-bsp-/}
+  zd=${zd/-${cpuArch}.zip/}
+  zs=install-bsp-boot.sh
+
+  mkdir -p ${ltspBase}${cpuArch}/root/board-debs/${zd}
+
+  cd ${ltspBase}${cpuArch}/root/board-debs/${zd}
+  unzip -o ${z}
+  if [ -e install-bsp.sh ]; then
+    zs=install-bsp.sh
+  fi
+  cd - > /dev/null
+
+  chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/${zs}
+
+  cd ${ltspBase}${cpuArch}/root/board-debs
+  if [ ! -e ${zs} ]; then
+    ln -s ${zd}/${zs} ${zs}
+  fi
+  cd - > /dev/null
+done
 
 
 chroot ${ltspBase}${cpuArch} bash -e /root/bin/dru-usr.sh
@@ -902,53 +1075,27 @@ if [ ${fanSpeed} != keep ]; then
 fi
 
 
-cat <<EOFDRURCLF | tee -a ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
-
-if [ ! -e /etc/.zy-first.done ]; then
-EOFDRURCLF
-
-
-[ "${cpuArch:0:3}" = "arm" ] && echo "  /usr/local/bin/zy-nand-get" >>  ${ltspBase}${cpuArch}/etc/rc.local
-
-
-cat <<EOFDRURCLO | tee -a ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
-
-  #omv-initsystem
-  #dpkg-reconfigure openmediavault-lvm2
-
-  touch /etc/.zy-first.done
-fi
-EOFDRURCLO
-
-
-if [ "${cpuArch:0:3}" = "arm" ]; then
-cat <<EOFDRURCLS | tee -a ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
-
-/sbin/buzzerc -t 1
-/sbin/setLED SYS OFF
-EOFDRURCLS
-fi
-
-
 cat <<EOFDRURCLZ | tee -a ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
 
-touch /tmp/.dru-boot.done
 EOFDRURCLZ
 
 
 echo "exit 0" >>  ${ltspBase}${cpuArch}/etc/rc.local
 
 
-sed -i s/'#disallow-other-stacks=no'/'disallow-other-stacks=yes'/g ${ltspBase}${cpuArch}/etc/avahi/avahi-daemon.conf
+if [ -e ${ltspBase}${cpuArch}/etc/avahi/avahi-daemon.conf ]; then
+  sed -i s/'#disallow-other-stacks=no'/'disallow-other-stacks=yes'/g ${ltspBase}${cpuArch}/etc/avahi/avahi-daemon.conf
+fi
 
-#sed -i 's|dir = "/dev"|dir = "/dev/mapper"|g' ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
+if [ -e ${ltspBase}${cpuArch}/etc/lvm/lvm.conf ]; then
+  #sed -i 's|dir = "/dev"|dir = "/dev/mapper"|g' ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
 
-#sed -i s/'use_lvmetad = 0'/'use_lvmetad = 1'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
+  #sed -i s/'use_lvmetad = 0'/'use_lvmetad = 1'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
 
-sed -i s/'obtain_device_list_from_udev = 1'/'obtain_device_list_from_udev = 0'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
+  sed -i s/'obtain_device_list_from_udev = 1'/'obtain_device_list_from_udev = 0'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
 
-#sed -i s/'sysfs_scan = 1'/'sysfs_scan = 0'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
-
+  #sed -i s/'sysfs_scan = 1'/'sysfs_scan = 0'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
+fi
 
 sed -i s/'RSYNC_ENABLE=.*'/'RSYNC_ENABLE=true'/g ${ltspBase}${cpuArch}/etc/default/rsync
 
@@ -1034,6 +1181,7 @@ for z in `ls ${ltspBase}kernel/linux-image-*-${cpuArch}.zip` ; do
 done
 
 cd ${ltspBase}${cpuArch}/boot/
+
 if [ -e ${ltspBase}${cpuArch}/root/board-debs/install-linux.sh ]; then
   true
 elif [ -e ${ltspBase}kernel/uImage ]; then
@@ -1044,10 +1192,18 @@ elif [ -e ${ltspBase}fw/uImage ]; then
   chown root:root uImage
 fi
 
-unzip -o ${ltspBase}archives/*usb_key_func*.zip
-for f in ${ltspBase}archives/*-boot*.tar.gz ; do
-  tar xzvf $f
+for f in ${ltspBase}archives/*usb_key_func*.zip ; do
+  if [ -e $f ]; then
+    unzip -o $f
+  fi
 done
+
+for f in ${ltspBase}archives/*-boot*.tar.gz ; do
+  if [ -e $f ]; then
+    tar xzvf $f
+  fi
+done
+
 cd -
 
 cd ${ltspBase}${cpuArch}/
@@ -1172,26 +1328,7 @@ fi
 
 firstUser=`cat ${ltspBase}${cpuArch}/etc/passwd |grep '504:500' | cut -d ':' -f 1 2>/dev/null`
 
-cat <<EOFDRUBCF | tee ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf
-boardModel=${boardModel}
-FWGETURL="${FWGETURL}"
-FWUSEVER="${FWUSEVER}"
-fanSpeed=${fanSpeed}
-firstUser=${firstUser}
-imageMdMount=${imageMdMount}
-imageOmv=${imageOmv}
-imageOmvInit=${imageOmvInit}
-imageHostname=${imageHostname}
-imageEth0Ip=${imageEth0Ip}
-imageEth0Mask=${imageEth0Mask}
-imageEth1Ip=${imageEth1Ip}
-imageEth1Mask=${imageEth1Mask}
-imageRouter=${imageRouter}
-imageDNS=${imageDNS}
-EOFDRUBCF
-
-mkdir -p ${ltspBase}etc
-cp -p ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf ${ltspBase}etc/
+WriteConfigFile
 
 touch ${ltspBase}${cpuArch}/tmp/configuration.done
 

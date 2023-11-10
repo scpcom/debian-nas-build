@@ -2,6 +2,12 @@
 #aptRecommends=--no-install-recommends
 aptRecommends=
 
+if [ -e /etc/debian-build.conf ]; then
+  . /etc/debian-build.conf
+fi
+
+[ "x$installRecommends" = "x0" ] && aptRecommends=--no-install-recommends
+
 sed -i s/'UID_MIN.*1000'/'UID_MIN			  502'/g /etc/login.defs
 sed -i s/'GID_MIN.*1000'/'GID_MIN			  500'/g /etc/login.defs
 
@@ -82,13 +88,23 @@ postfix	postfix/root_address	string
 proftpd-basic	shared/proftpd/inetd_or_standalone	select	standalone
 EOFDRUDCP
 
-DEBIAN_FRONTEND=noninteractive apt-get install -y bsd-mailx postfix
+if [ "x$installMailServer" != "x0" ]; then
+  DEBIAN_FRONTEND=noninteractive apt-get install -y bsd-mailx postfix
+fi
 
-apt-get install -y ${aptRecommends} anacron at cron logrotate mdadm smartmontools nfs-kernel-server samba winbind
+aptDebs="anacron at cron logrotate mdadm"
+[ "x$installSmartctl" != "x0" ]   && aptDebs="${aptDebs} smartmontools"
+[ "x$installNFSServer" != "x0" ]  && aptDebs="${aptDebs} nfs-kernel-server"
+[ "x$installSMBServer" != "x0" ]  && aptDebs="${aptDebs} samba winbind"
 
-apt-get install -y \
-  attr irqbalance ntp openssh-server samba-common-bin \
-  avahi-daemon snmpd proftpd-basic tftpd-hpa
+apt-get install -y ${aptRecommends} ${aptDebs}
+
+aptDebs="attr irqbalance ntp openssh-server"
+[ "x$installSMBServer" != "x0" ]  && aptDebs="${aptDebs} samba-common-bin"
+[ "x$installMiscServer" != "x0" ] && aptDebs="${aptDebs} avahi-daemon snmpd proftpd-basic tftpd-hpa"
+
+apt-get install -y ${aptDebs}
+  
 
 # not in wheezy
 #apt-get install -y samba-vfs-modules
@@ -258,14 +274,16 @@ apt-get install -y fake-hwclock i2c-tools mtd-utils uuid-runtime
 [ ! -e /sbin/i2cget ] && ln -s `which i2cget` /sbin/i2cget
 [ ! -e /sbin/i2cset ] && ln -s `which i2cset` /sbin/i2cset
 
-dit=/var/lib/dkms/iscsitarget/1.4.20.3+svn502
-if [ ! -e ${dit} ]; then
-  apt-get install -y iscsitarget-dkms
+if [ "x$installISCSITarget" != "x0" ]; then
+  dit=/var/lib/dkms/iscsitarget/1.4.20.3+svn502
+  if [ ! -e ${dit} ]; then
+    apt-get install -y iscsitarget-dkms
 
-  if [ -e ${dit} ]; then
-    cat ${dit}/source/patches/compat-3.12.patch | tee -a ${dit}/source/patches/compat-3.2-3.4.patch >/dev/null
-    cat ${dit}/source/patches/compat-3.13.patch | grep -A99 'diff --git b/kernel/block-io' | tee -a ${dit}/source/patches/compat-3.2-3.4.patch >/dev/null
-    #dpkg-reconfigure iscsitarget-dkms
+    if [ -e ${dit} ]; then
+      cat ${dit}/source/patches/compat-3.12.patch | tee -a ${dit}/source/patches/compat-3.2-3.4.patch >/dev/null
+      cat ${dit}/source/patches/compat-3.13.patch | grep -A99 'diff --git b/kernel/block-io' | tee -a ${dit}/source/patches/compat-3.2-3.4.patch >/dev/null
+      #dpkg-reconfigure iscsitarget-dkms
+    fi
   fi
 fi
 

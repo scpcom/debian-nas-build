@@ -28,6 +28,28 @@ if [ -n "$1" ]; then
         [ "$1" != "-" ] && ROM_FILE=$1
 fi
 
+
+show_fw_info() {
+  if [ -e ${FWOUTPATH}/model.number ]; then
+    #board_model=`/firmware/sbin/mrd_model -p`
+    file_model=`cat ${FWOUTPATH}/model.number`
+
+    #CURR_FW_REV=`cat /firmware/mnt/info/revision`
+    NEW_FW_REV=`cat ${FWOUTPATH}/firmware.revision`
+
+    NEW_FW_VER=`cat ${FWOUTPATH}/firmware.version`
+
+    init_model="UNKOWN"
+    if [ -e ${FWOUTPATH}/modelname ]; then
+      init_model=`cat ${FWOUTPATH}/modelname`
+    fi
+
+    echo "new firmware: ${NEW_FW_VER} rev ${NEW_FW_REV} for ${file_model} ${init_model}"
+  fi
+}
+
+# main
+
 #mount -o bind /newroot/mnt /mnt
 
 #[ ! -e /sbin/bin2ram   ] && cp -p /oldroot/sbin/bin2ram   /sbin/
@@ -106,17 +128,7 @@ if [ -e ${FWOUTPATH}/DATA_0101 ]; then
   cd - > /dev/null
 fi
 
-if [ -e ${FWOUTPATH}/model.number ]; then
-  #board_model=`/firmware/sbin/mrd_model -p`
-  file_model=`cat ${FWOUTPATH}/model.number`
-
-  #CURR_FW_REV=`cat /firmware/mnt/info/revision`
-  NEW_FW_REV=`cat ${FWOUTPATH}/firmware.revision`
-
-  NEW_FW_VER=`cat ${FWOUTPATH}/firmware.version`
-
-  echo "new firmware: ${NEW_FW_VER} rev ${NEW_FW_REV} for ${file_model}"
-fi
+show_fw_info
 
 if [ -e ${FWOUTPATH}/sysdisk.img.gz -a ! -e ${FWOUTPATH}/sysdisk.img ]; then
   gzip -cd ${FWOUTPATH}/sysdisk.img.gz > ${FWOUTPATH}/sysdisk.img
@@ -154,6 +166,9 @@ if [ -e ${FWOUTPATH}/vmlinuz_unpacked/initramfs/etc/profile ]; then
   sudo chmod ugo+rw ../../../newroot.tar.gz
   cd - > /dev/null
 
+  cp -p ${FWOUTPATH}/vmlinuz_unpacked/initramfs/etc/modelname ${FWOUTPATH}/
+
+  sudo rm -rf ${FWOUTPATH}/vmlinuz_unpacked/initramfs/newroot/
   sudo rm -rf ${FWOUTPATH}/vmlinuz_unpacked/initramfs/
 fi
 
@@ -166,3 +181,5 @@ if [ -e ${FWOUTPATH}/sysdisk.img ]; then
   cd - > /dev/null
   sudo umount "${FWOUTPATH}/mount"
 fi
+
+show_fw_info
