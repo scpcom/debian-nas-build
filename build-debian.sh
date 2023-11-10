@@ -603,7 +603,7 @@ EOFDRULININST
 
 chmod ugo+rx ${ltspBase}${cpuArch}/root/board-debs/drulininst.sh
 
-if [ $cpuArch != "armhf" ]; then
+if [ "${cpuArch:0:3}" != "arm" ]; then
   true
 elif [ -e ${ltspBase}${cpuArch}/bin/systemctl.druic -a -e ${ltspBase}${cpuArch}/bin/systemctl.distrib ]; then
   chroot ${ltspBase}${cpuArch} rm /bin/systemctl
@@ -613,7 +613,7 @@ fi
 chroot ${ltspBase}${cpuArch} systemctl enable ssh
 chroot ${ltspBase}${cpuArch} systemctl disable quota
 
-if [ $cpuArch != "armhf" ]; then
+if [ "${cpuArch:0:3}" != "arm" ]; then
 	chroot ${ltspBase}${cpuArch} bash -e /root/board-debs/drulininst.sh
 
 	cd ${ltspBase}${cpuArch}
@@ -817,7 +817,7 @@ proc            /proc           proc    defaults          0       0
 tmpfs           /tmp            tmpfs   defaults          0       0
 EOFDRUFSTAB
 
-if [ $cpuArch != "armhf" ]; then
+if [ "${cpuArch:0:3}" != "arm" ]; then
   cat <<EOFDRUFSTAC | tee -a ${ltspBase}${cpuArch}/etc/fstab > /dev/null
 tmpfs           /var/log        tmpfs   defaults          0       0
 /dev/${bootDisk}1  /boot           vfat    defaults          0       2
@@ -833,7 +833,7 @@ cp -p ${ltspBase}${cpuArch}/etc/rc.local-debian ${ltspBase}${cpuArch}/etc/rc.loc
 sed -i '/^exit 0/ d' ${ltspBase}${cpuArch}/etc/rc.local
 
 
-if [ $cpuArch = "armhf" ]; then
+if [ "${cpuArch:0:3}" = "arm" ]; then
 cat <<EOFDRURCLG | tee -a ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
 
 if [ ! -e /dev/gpio ]; then
@@ -857,7 +857,7 @@ if [ ! -e /etc/.zy-first.done ]; then
 EOFDRURCLF
 
 
-[ $cpuArch = "armhf" ] && echo "  /usr/local/bin/zy-nand-get" >>  ${ltspBase}${cpuArch}/etc/rc.local
+[ "${cpuArch:0:3}" = "arm" ] && echo "  /usr/local/bin/zy-nand-get" >>  ${ltspBase}${cpuArch}/etc/rc.local
 
 
 cat <<EOFDRURCLO | tee -a ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
@@ -870,7 +870,7 @@ fi
 EOFDRURCLO
 
 
-if [ $cpuArch = "armhf" ]; then
+if [ "${cpuArch:0:3}" = "arm" ]; then
 cat <<EOFDRURCLS | tee -a ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
 
 /sbin/buzzerc -t 1
@@ -887,6 +887,14 @@ EOFDRURCLZ
 
 echo "exit 0" >>  ${ltspBase}${cpuArch}/etc/rc.local
 
+
+#sed -i 's|dir = "/dev"|dir = "/dev/mapper"|g' ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
+
+#sed -i s/'use_lvmetad = 0'/'use_lvmetad = 1'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
+
+sed -i s/'obtain_device_list_from_udev = 1'/'obtain_device_list_from_udev = 0'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
+
+#sed -i s/'sysfs_scan = 1'/'sysfs_scan = 0'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
 
 
 sed -i s/'RSYNC_ENABLE=.*'/'RSYNC_ENABLE=true'/g ${ltspBase}${cpuArch}/etc/default/rsync
@@ -1041,12 +1049,23 @@ if [ ${imageOmv} = true ]; then
 fi
 
 
-if [ $cpuArch != "armhf" ]; then
+if [ "${cpuArch:0:3}" != "arm" ]; then
   true
 elif [ -e ${ltspBase}${cpuArch}/bin/systemctl.druic -a ! -e ${ltspBase}${cpuArch}/bin/systemctl.distrib ]; then
   chroot ${ltspBase}${cpuArch} systemctl enable zy-stop
   chroot ${ltspBase}${cpuArch} dpkg-divert --local --rename --add /bin/systemctl
   chroot ${ltspBase}${cpuArch} ln -s /bin/systemctl.druic /bin/systemctl
+fi
+
+
+if [ ! -e ${ltspBase}${cpuArch}/sbin/hotplug ]; then
+  cat <<EOFDRUSBHP | tee -a ${ltspBase}${cpuArch}/sbin/hotplug > /dev/null
+#!/bin/sh
+#echo 'ACTION="'$ACTION'" DEVPATH="'$DEVPATH'" SUBSYSTEM="'$SUBSYSTEM'" SEQNUM="'$SEQNUM'"' >> /var/log/hotplug.log
+exit 0
+EOFDRUSBHP
+
+  chmod ugo+rx ${ltspBase}${cpuArch}/sbin/hotplug
 fi
 
 

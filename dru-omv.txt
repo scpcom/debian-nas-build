@@ -41,14 +41,16 @@ apt-get install -y --no-install-recommends libnotify4
 apt-get install -y ${aptRecommends} collectd
 
 
-echo " *** omv repo packages ..."
+if [ ! -e /etc/apt/sources.list.d/openmediavault.list ]; then
+  echo " *** omv repo packages ..."
 
-#echo "deb http://packages.openmediavault.org/public stoneburner main" | tee /etc/apt/sources.list.d/openmediavault.list
-echo "deb http://packages.openmediavault.org/public erasmus main" | tee /etc/apt/sources.list.d/openmediavault.list
+  #echo "deb http://packages.openmediavault.org/public stoneburner main" | tee /etc/apt/sources.list.d/openmediavault.list
+  echo "deb http://packages.openmediavault.org/public erasmus main" | tee /etc/apt/sources.list.d/openmediavault.list
 
-apt-key adv --keyserver keyserver.ubuntu.com --recv 7E7A6C592EF35D13
+  apt-key adv --keyserver keyserver.ubuntu.com --recv 7E7A6C592EF35D13
 
-apt-get update
+  apt-get update
+fi
 
 apt-get install -y libjs-extjs5 php5-pam
 #apt-get install -y proftpd-mod-vroot
@@ -114,6 +116,18 @@ cd -
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y openmediavault openmediavault-lvm2
 
+omvedeb=openmediavault-omvextrasorg_latest_all3.deb
+if [ ! -e /root/source/${omvedeb} ]; then
+  cd /root/source/
+  wget -N http://omv-extras.org/${omvedeb}
+  dpkg -i ${omvedeb}
+  cd -
+
+  apt-get update
+fi
+
+cat <<\EOFDRUOMVP | tee /usr/local/bin/dru-omv-patch > /dev/null
+#!/bin/sh
 mkdir -p /usr/share/openmediavault/initsystem.disabled
 for s in 60rootfs 65mdadm 90sysctl 99rrd ; do
   if [ -e /usr/share/openmediavault/initsystem/$s ]; then
@@ -132,6 +146,12 @@ sed -i s/'eth|wlan'/'eth|egiga|wlan'/g /usr/share/openmediavault/initsystem/40in
 sed -i s/'"UID_MIN", 1000'/'"UID_MIN", 502'/g /usr/share/php/openmediavault/system/user.inc
 sed -i s/'"GID_MIN", 1000'/'"GID_MIN", 500'/g /usr/share/php/openmediavault/system/group.inc
 sed -i s/'eth|venet'/'eth|egiga|venet'/g /usr/share/php/openmediavault/system/net/networkinterfacebackend/ethernet.inc
+
+sed -i s/'$this->getCanonicalDeviceFile()'/'$this->getDeviceFile()'/g /usr/share/php/openmediavault/system/filesystem/filesystem.inc
+EOFDRUOMVP
+
+chmod ugo+rx /usr/local/bin/dru-omv-patch
+/usr/local/bin/dru-omv-patch
 
 rm /usr/sbin/invoke-rc.d
 dpkg-divert --local --rename --remove /usr/sbin/invoke-rc.d
