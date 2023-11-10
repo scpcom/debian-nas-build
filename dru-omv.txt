@@ -62,7 +62,8 @@ apt-get install -y php5-fpm || apt-get install -y php-fpm
 
 apt-get install -y \
   libesmtp6 libmodbus5 liboping0 libprotobuf-c1 \
-  libupsclient4 libyajl2
+  libyajl2
+apt-get install -y libupsclient4 || apt-get install -y libupsclient6
 apt-get install -y liblvm2app2.2 || true
 
 # not in stretch
@@ -76,7 +77,11 @@ apt-get install -y ${aptRecommends} collectd
 distDeb=stretch
 distOmv=arrakis
 versOmv=4
-if grep bullseye /etc/apt/sources.list > /dev/null ; then
+if grep bookworm /etc/apt/sources.list > /dev/null ; then
+  distDeb=bookworm
+  distOmv=sandworm
+  versOmv=7
+elif grep bullseye /etc/apt/sources.list > /dev/null ; then
   distDeb=bullseye
   distOmv=shaitan
   versOmv=6
@@ -108,7 +113,7 @@ if [ ! -e /etc/apt/sources.list.d/openmediavault.list ]; then
   #fi
   echo "deb http://packages.openmediavault.org/public ${distOmv} main" | tee /etc/apt/sources.list.d/openmediavault.list
 
-  #wget -O - http://packages.openmediavault.org/public/archive.key | sudo apt-key add -
+  wget -O - http://packages.openmediavault.org/public/archive.key | apt-key add -
   apt-key adv --keyserver keyserver.ubuntu.com --recv 7E7A6C592EF35D13 || true
   apt-key adv --keyserver keyserver.ubuntu.com --recv 24863F0C716B980B || true
 
@@ -272,6 +277,16 @@ sed -i s/'eth|venet'/'eth|egiga|venet'/g /usr/share/php/openmediavault/system/ne
 #sed -i s/'$this->getCanonicalDeviceFile()'/'$this->getDeviceFile()'/g /usr/share/php/openmediavault/system/filesystem/filesystem.inc
 
 sed -i 's|OMV_MOUNT_DIR="/srv"|OMV_MOUNT_DIR="/media"|g' /etc/default/openmediavault
+if grep -q '^OMV_WATCHDOG_ENABLED=' /etc/default/openmediavault ; then
+  sed -i 's|^OMV_WATCHDOG_ENABLED=.*|OMV_WATCHDOG_ENABLED="NO"|g' /etc/default/openmediavault
+else
+  echo 'OMV_WATCHDOG_ENABLED="NO"' >> /etc/default/openmediavault
+fi
+if [ -e /etc/systemd/system.conf.d/openmediavault-watchdog.conf ]; then
+  if grep -q '^RuntimeWatchdogSec=' /etc/systemd/system.conf.d/openmediavault-watchdog.conf ; then
+    sed -i 's|^RuntimeWatchdogSec=.*|RuntimeWatchdogSec=0|g' /etc/systemd/system.conf.d/openmediavault-watchdog.conf
+  fi
+fi
 EOFDRUOMVP
 
 chmod ugo+rx /usr/local/bin/dru-omv-patch

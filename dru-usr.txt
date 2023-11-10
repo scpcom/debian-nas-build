@@ -18,6 +18,7 @@ adminUser=admin
 usermod -a -G adm,dialout,fax,cdrom,floppy,tape,audio,dip,video,plugdev ${adminUser}
 
 cat /etc/group | grep '^ssh:' >/dev/null && usermod -a -G ssh    ${adminUser}
+cat /etc/group | grep '^_ssh:' >/dev/null && usermod -a -G _ssh  ${adminUser}
 cat /etc/group | grep sudo    >/dev/null && usermod -a -G sudo   ${adminUser}
 cat /etc/group | grep games   >/dev/null && usermod -a -G games  ${adminUser}
 cat /etc/group | grep users   >/dev/null && usermod -a -G users  ${adminUser}

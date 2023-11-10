@@ -2,6 +2,8 @@
 #aptRecommends=--no-install-recommends
 aptRecommends=
 
+versDeb=`cat /etc/os-release | grep -E '^VERSION_ID=' | cut -d '=' -f 2- | tr -d '"'`
+
 if [ -e /etc/debian-build.conf ]; then
   . /etc/debian-build.conf
 fi
@@ -170,7 +172,6 @@ ethtool						 \
 file						 \
 findutils					 \
 ftp						 \
-fuse						 \
 gdbserver					 \
 gettext-base					 \
 gnupg						 \
@@ -209,7 +210,6 @@ pciutils					 \
 procps						 \
 psmisc						 \
 rdate						 \
-resolvconf					 \
 rsync						 \
 screen						 \
 sdparm						 \
@@ -238,6 +238,12 @@ wget						 \
 whiptail					 \
 xz-utils					 \
 zip
+
+if [ $versDeb -lt 12 ]; then
+  apt-get ${aptRecommends} install -y fuse resolvconf
+else
+  apt-get ${aptRecommends} install -y fuse3 systemd-resolved
+fi
 
 apt-get ${aptRecommends} install -y iproute || apt-get ${aptRecommends} install -y iproute2
 

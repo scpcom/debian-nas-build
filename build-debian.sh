@@ -15,8 +15,8 @@ distBrand=Debian
 #distName=jessie
 #distName=stretch
 #distName=buster
-distName=bullseye
-#distName=bookworm
+#distName=bullseye
+distName=bookworm
 distURL=http://ftp.us.debian.org/debian
 secuURL=http://security.debian.org
 imageName=debian-nas
@@ -59,7 +59,7 @@ versOmv=4
 if [ ${distName} = bookworm ] ; then
   distDeb=bookworm
   distKeyringFile=release-12.asc
-  distOmv=shaitan
+  distOmv=sandworm
   versOmv=7
 elif [ ${distName} = bullseye ] ; then
   distDeb=bullseye
@@ -643,11 +643,15 @@ else
 fi
 
 if [ -e ${ltspBase}${cpuArch}/etc/resolv.conf ]; then
-  [ ! -e ${ltspBase}${cpuArch}/etc/resolv.conf-resolvconf ] && chroot ${ltspBase}${cpuArch} cp -pP /etc/resolv.conf /etc/resolv.conf-resolvconf
+  if ! readlink ${ltspBase}${cpuArch}/etc/resolv.conf | grep -q systemd ; then
+    [ ! -e ${ltspBase}${cpuArch}/etc/resolv.conf-resolvconf ] && chroot ${ltspBase}${cpuArch} cp -pP /etc/resolv.conf /etc/resolv.conf-resolvconf
+  fi
 fi
 
 if [ -e ${ltspBase}${cpuArch}/etc/resolv.conf-resolvconf ]; then
-  chroot ${ltspBase}${cpuArch} cp -pP /etc/resolv.conf-resolvconf /etc/resolv.conf
+  if ! readlink ${ltspBase}${cpuArch}/etc/resolv.conf | grep -q systemd ; then
+    chroot ${ltspBase}${cpuArch} cp -pP /etc/resolv.conf-resolvconf /etc/resolv.conf
+  fi
 fi
 
 echo " *** add repositories ..."
@@ -945,7 +949,10 @@ done
 
 chroot ${ltspBase}${cpuArch} bash -e /root/bin/dru-usr.sh
 
-chroot ${ltspBase}${cpuArch} umount /proc
+bash ${ltspBase}drushut-${cpuArch}.sh || true
+bash ${ltspBase}drushut-${cpuArch}.sh || true
+
+chroot ${ltspBase}${cpuArch} umount /proc || true
 
 
 echo " *** configuration ..."
@@ -1389,7 +1396,9 @@ elif [ -e ${ltspBase}fw/modules.tar.gz ]; then
 fi
 
 for f in ${ltspBase}archives/*debian-*-root*.tar.gz ; do
-  tar xzvf $f
+  if [ -e $f ]; then
+    tar xzvf $f
+  fi
 done
 
 for f in `ls ${ltspBase}archives/*debian-*${distName}*-init-scripts*.tar.gz` ; do
@@ -1407,7 +1416,9 @@ omvprfx=openmediavault-${versOmv}
 omvpkgv=`chroot ${ltspBase}${cpuArch} dpkg -s openmediavault | grep -E '^Version: ' | cut -d ' ' -f 2 | cut -d '.' -f 1-2`
 
   for f in ${ltspBase}archives/*${omvprfx}*-root*.tar.gz ; do
-    tar xzvf $f
+    if [ -e $f ]; then
+      tar xzvf $f
+    fi
   done
 
   for p in ${ltspBase}archives/*${omvprfx}*.patch ; do
@@ -1419,11 +1430,13 @@ omvpkgv=`chroot ${ltspBase}${cpuArch} dpkg -s openmediavault | grep -E '^Version
     if [ ! -e $f ]; then
       f=$p
     fi
-    echo $f
-    s=${ltspBase}${cpuArch}/tmp/`basename $f`.done
-    if [ ! -e $s ]; then
-      patch -p1 < $f
-      touch $s
+    if [ -e $f ]; then
+      echo $f
+      s=${ltspBase}${cpuArch}/tmp/`basename $f`.done
+      if [ ! -e $s ]; then
+        patch -p1 < $f
+        touch $s
+      fi
     fi
   done
 fi
