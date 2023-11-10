@@ -14,7 +14,7 @@ sed -i s/'GID_MIN.*1000'/'GID_MIN			  500'/g /etc/login.defs
 
 echo " *** upgrade packages ..."
 
-apt-get update
+apt-get update || apt-get update
 
 if [ ! -e /usr/sbin/invoke-rc.d.distrib ]; then
   dpkg-divert --local --rename --add /usr/sbin/invoke-rc.d

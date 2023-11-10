@@ -76,14 +76,19 @@ fi
 if [ ! -e /etc/apt/sources.list.d/openmediavault.list ]; then
   echo " *** omv repo packages ..."
 
-  if [ $distOmv = arrakis ]; then
-    echo "deb [ trusted=yes allow-insecure=yes ] http://packages.openmediavault.org/public ${distOmv} main" | tee /etc/apt/sources.list.d/openmediavault.list
-  else
-    echo "deb http://packages.openmediavault.org/public ${distOmv} main" | tee /etc/apt/sources.list.d/openmediavault.list
-  fi
+  #if [ $distOmv = arrakis ]; then
+  #  echo "deb [ trusted=yes allow-insecure=yes ] http://packages.openmediavault.org/public ${distOmv} main" | tee /etc/apt/sources.list.d/openmediavault.list
+  #else
+  #  echo "deb http://packages.openmediavault.org/public ${distOmv} main" | tee /etc/apt/sources.list.d/openmediavault.list
+  #fi
+  echo "deb http://packages.openmediavault.org/public ${distOmv} main" | tee /etc/apt/sources.list.d/openmediavault.list
 
   #wget -O - http://packages.openmediavault.org/public/archive.key | sudo apt-key add -
-  apt-key adv --keyserver keyserver.ubuntu.com --recv 7E7A6C592EF35D13
+  apt-key adv --keyserver keyserver.ubuntu.com --recv 7E7A6C592EF35D13 || true
+
+  apt-get update --allow-unauthenticated
+
+  apt-get install --allow-unauthenticated -y openmediavault-keyring
 
   apt-get update
 fi
@@ -161,7 +166,7 @@ cd -
 
 DEBIAN_FRONTEND=noninteractive apt-get install -y openmediavault openmediavault-lvm2 || DEBIAN_FRONTEND=noninteractive apt-get install -y openmediavault
 
-omvedeb=openmediavault-omvextrasorg_latest_all3.deb
+omvedeb=openmediavault-omvextrasorg_latest_all4.deb
 if [ $distOmv = erasmus ]; then
   omvedeb=openmediavault-omvextrasorg_latest_all3.deb
 elif [ $distOmv = stoneburner ]; then

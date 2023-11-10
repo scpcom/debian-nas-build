@@ -11,7 +11,8 @@ boardName=nas
 cpuArch=armhf
 distBrand=Debian
 #distName=wheezy
-distName=jessie
+#distName=jessie
+distName=stretch
 distURL=http://ftp.us.debian.org/debian
 secuURL=http://security.debian.org
 imageName=debian-nas
@@ -189,7 +190,7 @@ EOM
 
     echo "Creating images/${IMAGE} ......"
 
-    rsync -a "$R/" "${MOUNTDIR}/"
+    rsync -a "$R/" "${MOUNTDIR}/" || true
     rsync -a --progress "$R/" "${MOUNTDIR}/"
 
     rm -rf ${MOUNTDIR}/tmp/* ${MOUNTDIR}/var/tmp/*
@@ -469,7 +470,7 @@ case ${boardModel} in
     nsa325)  FWOLDVER="4.80" ;;
 esac
 
-FWNEWVER="5.20"
+FWNEWVER="5.21"
 case ${boardModel} in
     nsa210)  FWNEWVER="4.41" ;;
     nsa220p) FWNEWVER="3.25" ;;
@@ -827,6 +828,12 @@ fi
 
 chroot ${ltspBase}${cpuArch} systemctl enable ssh
 chroot ${ltspBase}${cpuArch} systemctl disable quota
+chroot ${ltspBase}${cpuArch} systemctl disable quotaon
+
+if [ ${imageOmv} = true ]; then
+  chroot ${ltspBase}${cpuArch} systemctl disable openmediavault-beep-down
+  chroot ${ltspBase}${cpuArch} systemctl disable openmediavault-beep-up
+fi
 
 if [ "${cpuArch:0:3}" != "arm" ]; then
 	chroot ${ltspBase}${cpuArch} bash -e /root/board-debs/drulininst.sh
@@ -1088,6 +1095,8 @@ if [ ! -e ${ltspBase}${cpuArch}/etc/rc.local ]; then
 
 exit 0
 EOFDRURCLA
+
+  chmod ugo+x ${ltspBase}${cpuArch}/etc/rc.local
 fi
 
 
@@ -1172,10 +1181,13 @@ else
     nsa320s) FWGETURL="ftp://ftp.zyxel.com/NSA320S/firmware/NSA320S_V4.75(AANV.1)C0.zip" ;;
     nsa325)  FWGETURL="ftp://ftp.zyxel.com/NSA325/firmware/NSA325_V4.81(AAAJ.0)C0.zip" ;;
 #    nas326)  FWGETURL="ftp://ftp.zyxel.com/NAS326/firmware/NAS326_V5.20(AAZF.1)C0.zip" ;;
+#    nas520)  FWGETURL="ftp://ftp.zyxel.com/NAS520/firmware/NAS520_V5.20(AASZ.0)C0.zip" ;;
+#    nas540)  FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.20(AATB.0)C0.zip" ;;
+#    nas542)  FWGETURL="ftp://ftp.zyxel.com/NAS542/firmware/NAS542_V5.20(ABAG.1)C0.zip" ;;
     nas326)  FWGETURL="ftp://ftp.zyxel.com/NAS326/firmware/NAS326_V5.21(AAZF.0)C0.zip" ;;
-    nas520)  FWGETURL="ftp://ftp.zyxel.com/NAS520/firmware/NAS520_V5.20(AASZ.0)C0.zip" ;;
-    nas540)  FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.20(AATB.0)C0.zip" ;;
-    nas542)  FWGETURL="ftp://ftp.zyxel.com/NAS542/firmware/NAS542_V5.20(ABAG.1)C0.zip" ;;
+    nas520)  FWGETURL="ftp://ftp.zyxel.com/NAS520/firmware/NAS520_V5.21(AASZ.0)C0.zip" ;;
+    nas540)  FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.21(AATB.0)C0.zip" ;;
+    nas542)  FWGETURL="ftp://ftp.zyxel.com/NAS542/firmware/NAS542_V5.21(ABAG.0)C0.zip" ;;
   esac
 fi
 
@@ -1298,16 +1310,16 @@ if [ ${imageOmv} = true ]; then
     fi
   fi
 
-  for f in ${ltspBase}archives/*openmediavault-*-root*.tar.gz ; do
-    tar xzvf $f
-  done
-
 omvprfx=openmediavault-4
 if [ $distOmv = erasmus ]; then
   omvprfx=openmediavault-3
 elif [ $distOmv = stoneburner ]; then
   omvprfx=openmediavault-2
 fi
+
+  for f in ${ltspBase}archives/*${omvprfx}*-root*.tar.gz ; do
+    tar xzvf $f
+  done
 
   for f in ${ltspBase}archives/*${omvprfx}*.patch ; do
     s=${ltspBase}${cpuArch}/tmp/`basename $f`.done

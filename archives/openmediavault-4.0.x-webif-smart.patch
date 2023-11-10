@@ -1,13 +1,17 @@
---- a/usr/share/php/openmediavault/system/storage/smartinformation.inc	2017-01-30 18:03:12.000000000 +0100
-+++ b/usr/share/php/openmediavault/system/storage/smartinformation.inc	2017-05-31 01:55:25.838120315 +0200
-@@ -156,8 +156,8 @@
+--- a/usr/share/php/openmediavault/system/storage/smartinformation.inc.orig	2017-07-18 21:41:51.000000000 +0200
++++ b/usr/share/php/openmediavault/system/storage/smartinformation.inc	2017-07-18 21:48:02.000000000 +0200
+@@ -157,10 +157,10 @@
  		// Bit 0: Command line did not parse
  		// Bit 1: Device open failed, or device did not return an
  		//        IDENTIFY DEVICE structure
--		if (($exitCode !== 0) && (($exitCode & 0) || ($exitCode & 1)))
--			throw new \OMV\ExecException($cmd->getCommandLine(), $output);
-+		//if (($exitCode !== 0) && (($exitCode & 0) || ($exitCode & 1)))
-+		//	throw new \OMV\ExecException($cmd->getCommandLine(), $output);
+-		if (($exitStatus !== 0) && (($exitStatus & 0) || ($exitStatus & 1))) {
+-			throw new \OMV\ExecException($cmd->getCommandLine(), $output,
+-				$exitStatus);
+-		}
++		//if (($exitStatus !== 0) && (($exitStatus & 0) || ($exitStatus & 1))) {
++		//	throw new \OMV\ExecException($cmd->getCommandLine(), $output,
++		//		$exitStatus);
++		//}
  		$this->cmdOutput = $output;
  
  		// Set flag to mark information has been successfully read.
