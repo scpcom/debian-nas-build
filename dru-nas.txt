@@ -255,6 +255,17 @@ apt-get install -y fake-hwclock i2c-tools mtd-utils uuid-runtime
 [ ! -e /sbin/nanddump       ] && ln -s `which nanddump`       /sbin/nanddump
 [ ! -e /sbin/nandwrite      ] && ln -s `which nandwrite`      /sbin/nandwrite
 
+dit=/var/lib/dkms/iscsitarget/1.4.20.3+svn502
+if [ ! -e ${dit} ]; then
+  apt-get install -y iscsitarget-dkms
+
+  if [ -e ${dit} ]; then
+    cat ${dit}/source/patches/compat-3.12.patch | tee -a ${dit}/source/patches/compat-3.2-3.4.patch >/dev/null
+    cat ${dit}/source/patches/compat-3.13.patch | grep -A99 'diff --git b/kernel/block-io' | tee -a ${dit}/source/patches/compat-3.2-3.4.patch >/dev/null
+    #dpkg-reconfigure iscsitarget-dkms
+  fi
+fi
+
 apt-get clean
 
 

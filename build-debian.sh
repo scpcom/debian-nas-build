@@ -921,6 +921,25 @@ if [ "${boardModel}" != "onboot" ]; then
   ${ltspBase}scripts/zy-fw-extract - ${ltspBase}fw "${FWGETURL}"
 fi
 
+chroot ${ltspBase}${cpuArch} mount -t proc /proc /proc
+
+for z in `ls ${ltspBase}kernel/linux-tools-*-${cpuArch}.zip` ; do
+  zd=`basename ${z}`
+  zd=${zd/linux-/}
+  zd=${zd/-${cpuArch}.zip/}
+  mkdir -p ${ltspBase}${cpuArch}/root/board-debs/${zd}
+  cd ${ltspBase}${cpuArch}/root/board-debs/${zd}
+  unzip -o ${z}
+  cd - > /dev/null
+  chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/install-kbuild.sh
+
+  cd ${ltspBase}${cpuArch}/root/board-debs
+  if [ ! -e install-kbuild.sh ]; then
+    ln -s ${zd}/install-kbuild.sh install-kbuild.sh
+  fi
+  cd - > /dev/null
+done
+
 for z in `ls ${ltspBase}kernel/linux-image-*-${cpuArch}.zip` ; do
   zd=`basename ${z}`
   zd=${zd/linux-image-/}
@@ -977,6 +996,10 @@ for f in ${ltspBase}archives/*debian-*-root*.tar.gz ; do
 done
 
 if [ ${imageOmv} = true ]; then
+  if chroot ${ltspBase}${cpuArch} dpkg -s linux-headers-${cpuArch} >/dev/null ; then
+    chroot ${ltspBase}${cpuArch} apt-get install -y openmediavault-iscsitarget
+  fi
+
   for f in ${ltspBase}archives/*openmediavault-*-root*.tar.gz ; do
     tar xzvf $f
   done
@@ -991,6 +1014,8 @@ if [ ${imageOmv} = true ]; then
 fi
 
 cd -
+
+chroot ${ltspBase}${cpuArch} umount /proc
 
 
 sed -i s/'NEED_IDMAPD=.*'/'NEED_IDMAPD=no'/g ${ltspBase}${cpuArch}/etc/default/nfs-common
