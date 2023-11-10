@@ -137,7 +137,7 @@ function make_disk_image() {
     fi
 
     BOOT_START_M=1
-    BOOT_SIZE_LIMIT=64
+    BOOT_SIZE_LIMIT=96
     START_M=`expr ${BOOT_START_M} + ${BOOT_SIZE_LIMIT}`
     SIZE_LIMIT=`expr ${SEEK} - 1 - ${START_M}`
 
@@ -443,7 +443,7 @@ elif [ x$1 = xuserpassword ]; then
   user_password
   exit 0
 elif [ x$1 = xdiskimage ]; then
-  make_disk_image ext4 2 $imageName
+  make_disk_image ext4 3 $imageName
   exit 0
 fi
 
@@ -1298,7 +1298,18 @@ for z in `ls ${ltspBase}kernel/linux-image-*-${cpuArch}.zip` ; do
   cd ${ltspBase}${cpuArch}/root/board-debs/${zd}
   unzip -o ${z}
   cd - > /dev/null
-  chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/install-linux.sh
+  # prefer existing bsp
+  find ${ltspBase}${cpuArch}/root/board-debs/nas5xx-*/ -name linux-bsp-nas5xx_*.deb | while read k ; do
+    b=`basename $k`
+    if [ -e ${ltspBase}${cpuArch}/root/board-debs/${zd}/$b ]; then
+      cp -p $k ${ltspBase}${cpuArch}/root/board-debs/${zd}/
+    fi
+  done
+  echo "#!/bin/sh"> ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
+  echo "cd /root/board-debs/${zd}/" >> ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
+  echo "/root/board-debs/${zd}/install-linux.sh" >> ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
+  chmod ugo+rx ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
+  chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/do-install-linux.sh
 
   cd ${ltspBase}${cpuArch}/root/board-debs
   if [ ! -e install-linux.sh ]; then
@@ -1506,7 +1517,7 @@ WriteConfigFile
 touch ${ltspBase}${cpuArch}/tmp/configuration.done
 
 
-make_disk_image ext4 2 $imageName
+make_disk_image ext4 3 $imageName
 
 echo "OK"
 

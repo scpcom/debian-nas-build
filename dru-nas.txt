@@ -287,6 +287,7 @@ rm -f /var/swap
 
 
 apt-get install -y fake-hwclock i2c-tools mtd-utils uuid-runtime
+apt-get install -y watchdog
 
 [ ! -e /bin/nice      ] && ln -s `which nice` /bin/nice
 [ ! -e /sbin/watchdog ] && ln -s `which busybox` /sbin/watchdog
