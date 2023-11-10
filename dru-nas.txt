@@ -21,12 +21,24 @@ if [ ! -e /usr/sbin/invoke-rc.d.distrib ]; then
   ln -s /bin/true /usr/sbin/invoke-rc.d
 fi
 
+if [ ! -e /usr/sbin/postmap.distrib ]; then
+  dpkg-divert --local --rename --add /usr/sbin/postmap
+  if [ ! -e /usr/sbin/postmap ]; then
+    ln -s /bin/true /usr/sbin/postmap
+  fi
+fi
+
 apt-get upgrade -y
 apt-get dist-upgrade -y
 
 if [ -e /usr/sbin/invoke-rc.d.distrib ]; then
   rm /usr/sbin/invoke-rc.d
   dpkg-divert --local --rename --remove /usr/sbin/invoke-rc.d
+fi
+
+if [ -e /usr/sbin/postmap.distrib ]; then
+  rm /usr/sbin/postmap
+  dpkg-divert --local --rename --remove /usr/sbin/postmap
 fi
 
 
@@ -61,6 +73,13 @@ echo " *** daemon packages ..."
 if [ ! -e /usr/sbin/invoke-rc.d.distrib ]; then
   dpkg-divert --local --rename --add /usr/sbin/invoke-rc.d
   ln -s /bin/true /usr/sbin/invoke-rc.d
+fi
+
+if [ ! -e /usr/sbin/postmap.distrib ]; then
+  dpkg-divert --local --rename --add /usr/sbin/postmap
+  if [ ! -e /usr/sbin/postmap ]; then
+    ln -s /bin/true /usr/sbin/postmap
+  fi
 fi
 
 #postfix	postfix/bad_recipient_delimiter	error	
@@ -115,6 +134,11 @@ false && apt-get install -y dbus triggerhappy
 if [ -e /usr/sbin/invoke-rc.d.distrib ]; then
   rm /usr/sbin/invoke-rc.d
   dpkg-divert --local --rename --remove /usr/sbin/invoke-rc.d
+fi
+
+if [ -e /usr/sbin/postmap.distrib ]; then
+  rm /usr/sbin/postmap
+  dpkg-divert --local --rename --remove /usr/sbin/postmap
 fi
 
 echo " *** NAS packages ..."

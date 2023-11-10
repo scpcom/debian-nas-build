@@ -46,6 +46,13 @@ if [ $cpuArch = amd64 -o $cpuArch = i386 ]; then
   boardName=pc
 fi
 
+distOmv=arrakis
+if [ ${distName} = jessie ] ; then
+  distOmv=erasmus
+elif [ ${distName} = wheezy ] ; then
+  distOmv=stoneburner
+fi
+
 
 # ---- functions ----
 
@@ -539,6 +546,10 @@ if ${imageOmv} = true ]; then
   installSMBServer=1
   installMiscServer=1
   installSmartctl=1
+
+  if [ $distName = stretch ]; then
+    installISCSITarget=0
+  fi
 
   omviDefault="--defaultno"
   if ${imageOmvInit} = true ]; then
@@ -1060,6 +1071,26 @@ fi
 
 
 
+if [ ! -e ${ltspBase}${cpuArch}/etc/rc.local ]; then
+  cat <<EOFDRURCLA | tee ${ltspBase}${cpuArch}/etc/rc.local > /dev/null
+#!/bin/sh -e
+#
+# rc.local
+#
+# This script is executed at the end of each multiuser runlevel.
+# Make sure that the script will "exit 0" on success or any other
+# value on error.
+#
+# In order to enable or disable this script just change the execution
+# bits.
+#
+# By default this script does nothing.
+
+exit 0
+EOFDRURCLA
+fi
+
+
 [ ! -e ${ltspBase}${cpuArch}/etc/rc.local-debian ] && cp -p ${ltspBase}${cpuArch}/etc/rc.local ${ltspBase}${cpuArch}/etc/rc.local-debian
 
 cp -p ${ltspBase}${cpuArch}/etc/rc.local-debian ${ltspBase}${cpuArch}/etc/rc.local
@@ -1156,6 +1187,25 @@ fi
 
 chroot ${ltspBase}${cpuArch} mount -t proc /proc /proc
 
+for z in `ls ${ltspBase}kernel/gcc-*-${cpuArch}.zip` ; do
+  zd=`basename ${z}`
+  #zd=${zd/gcc-/}
+  zd=${zd/-${cpuArch}.zip/}
+  zn=`echo ${zd} | cut -d "-" -f 1-2`
+  mkdir -p ${ltspBase}${cpuArch}/root/board-debs/${zd}
+  cd ${ltspBase}${cpuArch}/root/board-debs/${zd}
+  unzip -o ${z}
+  cd - > /dev/null
+  chmod ugo+rx ${ltspBase}${cpuArch}/root/board-debs/${zd}/install-${zn}.sh
+  chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/install-${zn}.sh
+
+  cd ${ltspBase}${cpuArch}/root/board-debs
+  if [ ! -e install-gcc.sh ]; then
+    ln -s ${zd}/install-${zn}.sh install-gcc.sh
+  fi
+  cd - > /dev/null
+done
+
 for z in `ls ${ltspBase}kernel/linux-tools-*-${cpuArch}.zip` ; do
   zd=`basename ${z}`
   zd=${zd/linux-/}
@@ -1237,16 +1287,29 @@ for f in ${ltspBase}archives/*debian-*-root*.tar.gz ; do
   tar xzvf $f
 done
 
+for f in `ls ${ltspBase}archives/*debian-*${distName}*-init-scripts*.tar.gz` ; do
+  tar xzvf $f
+done
+
 if [ ${imageOmv} = true ]; then
   if chroot ${ltspBase}${cpuArch} dpkg -s linux-headers-${cpuArch} >/dev/null ; then
-    chroot ${ltspBase}${cpuArch} apt-get install -y openmediavault-iscsitarget
+    if chroot ${ltspBase}${cpuArch} dpkg -s iscsitarget-dkms >/dev/null ; then
+      chroot ${ltspBase}${cpuArch} apt-get install -y openmediavault-iscsitarget
+    fi
   fi
 
   for f in ${ltspBase}archives/*openmediavault-*-root*.tar.gz ; do
     tar xzvf $f
   done
 
-  for f in ${ltspBase}archives/*openmediavault-*.patch ; do
+omvprfx=openmediavault-4
+if [ $distOmv = erasmus ]; then
+  omvprfx=openmediavault-3
+elif [ $distOmv = stoneburner ]; then
+  omvprfx=openmediavault-2
+fi
+
+  for f in ${ltspBase}archives/*${omvprfx}*.patch ; do
     s=${ltspBase}${cpuArch}/tmp/`basename $f`.done
     if [ ! -e $s ]; then
       patch -p1 < $f
@@ -1259,6 +1322,8 @@ cd -
 
 chroot ${ltspBase}${cpuArch} umount /proc
 
+
+sed -i s/'^" let g:skip_defaults_vim = 1'/'let g:skip_defaults_vim = 1'/g ${ltspBase}${cpuArch}/etc/vim/vimrc
 
 sed -i s/'NEED_IDMAPD=.*'/'NEED_IDMAPD=no'/g ${ltspBase}${cpuArch}/etc/default/nfs-common
 
@@ -1324,6 +1389,13 @@ elif [ -e ${ltspBase}${cpuArch}/bin/systemctl.druic -a ! -e ${ltspBase}${cpuArch
   chroot ${ltspBase}${cpuArch} ln -s /bin/systemctl.druic /bin/systemctl
 fi
 
+
+if [ -e ${ltspBase}${cpuArch}/lib/systemd/system/nfs-common.service ]; then
+  if [ "x`readlink ${ltspBase}${cpuArch}/lib/systemd/system/nfs-common.service`" = "x/dev/null" ]; then
+    rm ${ltspBase}${cpuArch}/lib/systemd/system/nfs-common.service
+    #systemctl enable nfs-common
+  fi
+fi
 
 if [ ! -e ${ltspBase}${cpuArch}/sbin/hotplug ]; then
   cat <<EOFDRUSBHP | tee -a ${ltspBase}${cpuArch}/sbin/hotplug > /dev/null
