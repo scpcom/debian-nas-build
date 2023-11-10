@@ -1,9 +1,9 @@
 #!/bin/sh
 
-oi=`which omv-initsystem || true`
-if [ "X${oi}" = "X" ]; then
-  sed -i s/'omv-initsystem'/'omv-confdbadm populate'/g /usr/local/bin/zy-ready
-fi
+#oi=`which omv-initsystem || true`
+#if [ "X${oi}" = "X" ]; then
+#  sed -i s/'omv-initsystem'/'omv-confdbadm populate'/g /usr/local/bin/zy-ready
+#fi
 
 echo " *** users ..."
 

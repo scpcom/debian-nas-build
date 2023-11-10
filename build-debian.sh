@@ -1431,6 +1431,10 @@ fi
 
 if [ ${imageOmv} = true ]; then
   if [ ${imageOmvInit} = true ]; then
+    sed -i 's|true #omv-confdbadm populate|omv-confdbadm populate|g' ${ltspBase}${cpuArch}/debinit.sh
+    sed -i 's|true #omv-confdbadm populate|omv-confdbadm populate|g' ${ltspBase}${cpuArch}/etc/rc.local
+    sed -i 's|true #omv-initsystem|omv-initsystem|g' ${ltspBase}${cpuArch}/debinit.sh
+    sed -i 's|true #omv-initsystem|omv-initsystem|g' ${ltspBase}${cpuArch}/etc/rc.local
     sed -i 's|#omv-initsystem|omv-initsystem|g' ${ltspBase}${cpuArch}/debinit.sh
     sed -i 's|#omv-initsystem|omv-initsystem|g' ${ltspBase}${cpuArch}/etc/rc.local
   fi
