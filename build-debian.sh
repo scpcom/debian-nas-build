@@ -870,7 +870,8 @@ sed -i s/'RSYNC_ENABLE=.*'/'RSYNC_ENABLE=true'/g ${ltspBase}${cpuArch}/etc/defau
 [ ! -e ${ltspBase}${cpuArch}/etc/samba/smb.conf-debian ] && mv ${ltspBase}${cpuArch}/etc/samba/smb.conf ${ltspBase}${cpuArch}/etc/samba/smb.conf-debian
 
 
-cp -p ${ltspBase}scripts/zy-fw-get-bin ${ltspBase}${cpuArch}/usr/local/bin/
+cp -p ${ltspBase}scripts/repack-zImage.sh ${ltspBase}${cpuArch}/usr/local/bin/
+cp -p ${ltspBase}scripts/zy-fw-get-bin    ${ltspBase}${cpuArch}/usr/local/bin/
 
 case ${boardModel} in
     nsa310a) FWGETURL="ftp://ftp.zyxel.com/NSA310a/firmware/NSA310_4.40(AFK.0)C0.zip" ;;
