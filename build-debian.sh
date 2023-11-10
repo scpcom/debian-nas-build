@@ -164,7 +164,9 @@ EOM
     fi
 
     if [ "${FS}" == "ext4" ]; then
-        mkfs.ext4 -L TC_ROOT -m 0 "${ROOT_LOOP}" > /dev/null
+        if ! mkfs.ext4 -O ^metadata_csum -L TC_ROOT -m 0 "${ROOT_LOOP}" > /dev/null ; then
+            mkfs.ext4 -L TC_ROOT -m 0 "${ROOT_LOOP}" > /dev/null
+        fi
     else
         mkfs.f2fs -l TC_ROOT -o 1 "${ROOT_LOOP}" > /dev/null
     fi
