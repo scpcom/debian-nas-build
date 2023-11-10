@@ -12,7 +12,8 @@ cpuArch=armhf
 distBrand=Debian
 #distName=wheezy
 #distName=jessie
-distName=stretch
+#distName=stretch
+distName=buster
 distURL=http://ftp.us.debian.org/debian
 secuURL=http://security.debian.org
 imageName=debian-nas
@@ -35,6 +36,7 @@ installRecommends=1
 installISCSITarget=0
 installMailServer=1
 installNFSServer=1
+installNTPServer=1
 installSMBServer=1
 installMiscServer=1
 installWifi=0
@@ -47,13 +49,30 @@ if [ $cpuArch = amd64 -o $cpuArch = i386 ]; then
   boardName=pc
 fi
 
+distDeb=stretch
 distOmv=arrakis
-if [ ${distName} = jessie ] ; then
+versOmv=4
+if [ ${distName} = bullseye ] ; then
+  distDeb=bullseye
+  distOmv=shaitan
+  versOmv=6
+elif [ ${distName} = buster ] ; then
+  distDeb=buster
+  distOmv=usul
+  versOmv=5
+elif [ ${distName} = stretch ] ; then
+  distDeb=stretch
+  distOmv=arrakis
+  versOmv=4
+elif [ ${distName} = jessie ] ; then
+  distDeb=jessie
   distOmv=erasmus
+  versOmv=3
 elif [ ${distName} = wheezy ] ; then
+  distDeb=wheezy
   distOmv=stoneburner
+  versOmv=2
 fi
-
 
 # ---- functions ----
 
@@ -290,6 +309,7 @@ askClientOpt() {
     "iscsitarget" "iSCSI Target" $installISCSITarget \
     "mailserver" "Mail Server" $installMailServer \
     "nfsserver" "NFS Server" $installNFSServer \
+    "ntpserver" "NTP Server" $installNTPServer \
     "smbserver" "SMB Server" $installSMBServer \
     "miscserver" "Avahi/SNMP/FTP/TFTP Server" $installMiscServer \
     "wifi" "WiFi/WLAN" $installWifi \
@@ -307,6 +327,8 @@ askClientOpt() {
     UpdateConfig installMailServer $installMailServer
     installNFSServer=0
     UpdateConfig installNFSServer $installNFSServer
+    installNTPServer=0
+    UpdateConfig installNTPServer $installNTPServer
     installSMBServer=0
     UpdateConfig installSMBServer $installSMBServer
     installMiscServer=0
@@ -338,6 +360,11 @@ askClientOpt() {
             \"nfsserver\")
                 installNFSServer=1
                 UpdateConfig installNFSServer $installNFSServer
+                echo enable $o 
+                ;;
+            \"ntpserver\")
+                installNTPServer=1
+                UpdateConfig installNTPServer $installNTPServer
                 echo enable $o 
                 ;;
             \"smbserver\")
@@ -393,6 +420,7 @@ installRecommends=${installRecommends}
 installISCSITarget=${installISCSITarget}
 installMailServer=${installMailServer}
 installNFSServer=${installNFSServer}
+installNTPServer=${installNTPServer}
 installSMBServer=${installSMBServer}
 installMiscServer=${installMiscServer}
 installWifi=${installWifi}
@@ -544,12 +572,16 @@ if ${imageOmv} = true ]; then
   installISCSITarget=1
   installMailServer=1
   installNFSServer=1
+  installNTPServer=1
   installSMBServer=1
   installMiscServer=1
   installSmartctl=1
 
-  if [ $distName = stretch ]; then
+  if [ ${versOmv} -gt 3 ]; then
     installISCSITarget=0
+  fi
+  if [ ${versOmv} -gt 4 ]; then
+    installNTPServer=0
   fi
 
   omviDefault="--defaultno"
@@ -829,6 +861,14 @@ fi
 chroot ${ltspBase}${cpuArch} systemctl enable ssh
 chroot ${ltspBase}${cpuArch} systemctl disable quota
 chroot ${ltspBase}${cpuArch} systemctl disable quotaon
+chroot ${ltspBase}${cpuArch} systemctl disable systemd-quotacheck
+
+if [ "${cpuArch:0:3}" != "arm" ]; then
+  true
+elif [ -e ${ltspBase}${cpuArch}/sbin/quotacheck -a ! -e ${ltspBase}${cpuArch}/sbin/quotacheck.distrib ]; then
+  chroot ${ltspBase}${cpuArch} dpkg-divert --local --rename --add /sbin/quotacheck
+  chroot ${ltspBase}${cpuArch} ln -s /bin/true /sbin/quotacheck
+fi
 
 if [ ${imageOmv} = true ]; then
   chroot ${ltspBase}${cpuArch} systemctl disable openmediavault-beep-down
@@ -1038,7 +1078,6 @@ cat <<EOFDRUTFD | tee ${ltspBase}${cpuArch}/etc/tmpfiles.d/${distBrandLower}.con
     d    /var/log/dist-upgrade   0755 root   root - -
     d    /var/log/fsck     0755 root   root - -
     d    /var/log/lightdm  0755 root   root - -
-    d    /var/log/ntpstats 0755 ntp    ntp  - -
     d    /var/log/samba    0750 root   adm  - -
     d    /var/log/upstart  0755 root   root - -
     d    /var/log/apache2       0750 root   adm  - -
@@ -1058,6 +1097,12 @@ if [ -e ${ltspBase}${cpuArch}/var/log/nginx ]; then
   cat <<EOFDRUTFD | tee -a ${ltspBase}${cpuArch}/etc/tmpfiles.d/${distBrandLower}.conf
     d    /var/log/nginx         0750 www-data adm - -
 EOFDRUTFD
+fi
+
+if [ "x$installNTPServer" != "x0" ]; then
+  cat <<EOFDRUTFN | tee -a ${ltspBase}${cpuArch}/etc/tmpfiles.d/${distBrandLower}.conf
+    d    /var/log/ntpstats 0755 ntp    ntp  - -
+EOFDRUTFN
 fi
 
 
@@ -1310,12 +1355,7 @@ if [ ${imageOmv} = true ]; then
     fi
   fi
 
-omvprfx=openmediavault-4
-if [ $distOmv = erasmus ]; then
-  omvprfx=openmediavault-3
-elif [ $distOmv = stoneburner ]; then
-  omvprfx=openmediavault-2
-fi
+omvprfx=openmediavault-${versOmv}
 
   for f in ${ltspBase}archives/*${omvprfx}*-root*.tar.gz ; do
     tar xzvf $f

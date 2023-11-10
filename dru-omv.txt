@@ -46,7 +46,8 @@ fi
 
 #apt-get install -y --reinstall dbus
 
-apt-get install -y acpid cpufrequtils dmeventd lvm2 monit rrdcached rsyslog
+apt-get install -y acpid cpufrequtils dmeventd lvm2 rrdcached rsyslog
+apt-get install -y monit || true
 #libnss-mdns 
 #apt-get install -y sane-utils
 apt-get install -y nginx
@@ -55,8 +56,9 @@ apt-get install -y nginx
 apt-get install -y php5-fpm || apt-get install -y php-fpm
 
 apt-get install -y \
-  libesmtp6 liblvm2app2.2 libmodbus5 liboping0 libprotobuf-c1 \
+  libesmtp6 libmodbus5 liboping0 libprotobuf-c1 \
   libupsclient4 libyajl2
+apt-get install -y liblvm2app2.2 || true
 
 # not in stretch
 apt-get install -y librabbitmq1 || true
@@ -103,6 +105,7 @@ if [ ! -e /etc/apt/sources.list.d/openmediavault.list ]; then
 
   #wget -O - http://packages.openmediavault.org/public/archive.key | sudo apt-key add -
   apt-key adv --keyserver keyserver.ubuntu.com --recv 7E7A6C592EF35D13 || true
+  apt-key adv --keyserver keyserver.ubuntu.com --recv 24863F0C716B980B || true
 
   apt-get update --allow-unauthenticated
 
@@ -111,7 +114,7 @@ if [ ! -e /etc/apt/sources.list.d/openmediavault.list ]; then
   apt-get update
 fi
 
-apt-get install -y libjs-extjs5
+apt-get install -y libjs-extjs5 || apt-get install -y libjs-extjs6
 # not in stretch
 apt-get install -y php5-pam || apt-get install -y php-pam
 
@@ -172,6 +175,18 @@ if [ $versOmv -lt 4 ]; then
 else
   apt-get install -y systemd-sysv
 fi
+
+for f in `grep 'NoNewPrivileges=yes' /lib/systemd/system/*.service | cut -d ':' -f 1` ; do
+  l=`readlink $f || true`
+  b=`basename $f`
+  e=/etc/systemd/system/${b}.d
+  if [ "X${l}" = "X" -a ! -e ${e}/privileges.conf ]; then
+    echo $e
+    mkdir $e
+    echo "[Service]" > ${e}/privileges.conf
+    echo "NoNewPrivileges=no" >> ${e}/privileges.conf
+  fi
+done
 
 
 echo " *** omv main and interactive packages ..."
@@ -236,6 +251,10 @@ EOFDRUOMVP
 chmod ugo+rx /usr/local/bin/dru-omv-patch
 /usr/local/bin/dru-omv-patch
 
+if [ -e /etc/default/chrony ]; then
+  sed -i s/'-F -1'/'-F 0'/g /etc/default/chrony
+fi
+
 if [ -e /usr/sbin/invoke-rc.d.distrib ]; then
   rm /usr/sbin/invoke-rc.d
   dpkg-divert --local --rename --remove /usr/sbin/invoke-rc.d
@@ -247,6 +266,11 @@ if [ -e /usr/sbin/postmap.distrib ]; then
 fi
 
 apt-get clean
+
+/etc/init.d/monit stop || true
+/etc/init.d/rrdcached stop || true
+/etc/init.d/collectd stop || true
+/etc/init.d/php*-fpm stop || true
 
 touch /tmp/`basename $0`.done
 echo "OK"

@@ -118,7 +118,8 @@ aptDebs="anacron at cron logrotate mdadm"
 
 apt-get install -y ${aptRecommends} ${aptDebs}
 
-aptDebs="attr irqbalance ntp openssh-server"
+aptDebs="attr irqbalance openssh-server"
+[ "x$installNTPServer" != "x0" ]  && aptDebs="${aptDebs} ntp"
 [ "x$installSMBServer" != "x0" ]  && aptDebs="${aptDebs} samba-common-bin"
 [ "x$installMiscServer" != "x0" ] && aptDebs="${aptDebs} avahi-daemon snmpd proftpd-basic tftpd-hpa"
 
@@ -179,7 +180,6 @@ ifupdown					 \
 info						 \
 initramfs-tools					 \
 inputattach					 \
-iproute						 \
 iptables					 \
 iputils-arping					 \
 iputils-ping					 \
@@ -238,6 +238,8 @@ wget						 \
 whiptail					 \
 xz-utils					 \
 zip
+
+apt-get ${aptRecommends} install -y iproute || apt-get ${aptRecommends} install -y iproute2
 
 # not in wheezy
 #apt-get ${aptRecommends} install -y dmidecode iproute2 kernel-common rename smemcap
