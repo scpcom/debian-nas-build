@@ -1397,6 +1397,9 @@ if [ "${cpuArch:0:3}" != "arm" ]; then
   true
 elif [ -e ${ltspBase}${cpuArch}/bin/systemctl.druic -a ! -e ${ltspBase}${cpuArch}/bin/systemctl.distrib ]; then
   chroot ${ltspBase}${cpuArch} systemctl enable zy-stop
+  if [ -e ${ltspBase}${cpuArch}/lib/systemd/system/zy-fanctrl.timer ]; then
+    chroot ${ltspBase}${cpuArch} systemctl enable zy-fanctrl.timer
+  fi
   chroot ${ltspBase}${cpuArch} dpkg-divert --local --rename --add /bin/systemctl
   chroot ${ltspBase}${cpuArch} ln -s /bin/systemctl.druic /bin/systemctl
 fi
