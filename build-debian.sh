@@ -872,6 +872,7 @@ sed -i s/'RSYNC_ENABLE=.*'/'RSYNC_ENABLE=true'/g ${ltspBase}${cpuArch}/etc/defau
 
 cp -p ${ltspBase}scripts/repack-zImage.sh ${ltspBase}${cpuArch}/usr/local/bin/
 cp -p ${ltspBase}scripts/zy-fw-get-bin    ${ltspBase}${cpuArch}/usr/local/bin/
+cp -p ${ltspBase}scripts/zy-fw-get-lib    ${ltspBase}${cpuArch}/usr/local/bin/
 
 case ${boardModel} in
     nsa310a) FWGETURL="ftp://ftp.zyxel.com/NSA310a/firmware/NSA310_4.40(AFK.0)C0.zip" ;;

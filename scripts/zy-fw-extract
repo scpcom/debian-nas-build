@@ -140,6 +140,15 @@ if [ -e ${FWOUTPATH}/vmlinuz_unpacked/initramfs/etc/profile ]; then
   cd - > /dev/null
 
   sudo ${SCRIPTDIR}/zy-fw-get-bin "${FWOUTPATH}/vmlinuz_unpacked/initramfs"
+
+  cd "${FWOUTPATH}/vmlinuz_unpacked/initramfs/lib/"
+  for l in ld-* libc.* libc-* libm.* libm-* ; do
+    if [ -e "${FWOUTPATH}/vmlinuz_unpacked/initramfs/newroot/lib/${l}" ]; then
+      sudo rm "${FWOUTPATH}/vmlinuz_unpacked/initramfs/newroot/lib/${l}"
+    fi
+  done
+  cd -
+
   cd "${FWOUTPATH}/vmlinuz_unpacked/initramfs/newroot"
   sudo tar czf ../../../newroot.tar.gz .
   sudo chmod ugo+rw ../../../newroot.tar.gz

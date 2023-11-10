@@ -2,6 +2,9 @@
 IRDROOT=$1
 NEWROOT=$1/newroot
 
+SCRIPTDIR=`dirname $0`
+cd "${SCRIPTDIR}" ; SCRIPTDIR=`pwd` ; cd - > /dev/null
+
 #mkdir ${NEWROOT}
 #mount -o noatime,nodiratime,errors=remount-ro ${pkp/1/2} ${NEWROOT}
 
@@ -34,6 +37,14 @@ cp -ap ${IRDROOT}/lib/firmware/. ${NEWROOT}/lib/firmware/
 cp -ap ${IRDROOT}/lib/modules/.  ${NEWROOT}/lib/modules/
 cp -p ${IRDROOT}/lib/libzy*      ${NEWROOT}/lib/
 
+cd ${IRDROOT}/lib/
+for l in ld-* libc.* libc-* libm.* libm-* ; do
+  if [ ! -e ${NEWROOT}/lib/${l} ]; then
+    true #cp -p ${l} ${NEWROOT}/lib/
+  fi
+done
+cd -
+
 cp -p ${IRDROOT}/firmware/sbin/bareboxenv ${NEWROOT}/sbin/
 cp -p ${IRDROOT}/firmware/sbin/mmiotool   ${NEWROOT}/sbin/
 
@@ -52,10 +63,13 @@ cp -p ${IRDROOT}/sbin/write_mac_mcu.sh ${NEWROOT}/sbin/
 #cp -p ${IRDROOT}/sbin/ntpdate_sync.sh  ${NEWROOT}/sbin/
 #cp -p ${IRDROOT}/sbin/zysh.sh          ${NEWROOT}/sbin/
 
-tar c -C ${IRDROOT} bin etc lib sbin usr var | tar x -C ${NEWROOT}/oldroot/
+tar c -C ${IRDROOT}/ bin etc lib sbin usr var | tar x -C ${NEWROOT}/oldroot/
 cp -p ${IRDROOT}/init ${NEWROOT}/oldroot/
 cp -p ${IRDROOT}/linuxrc ${NEWROOT}/oldroot/
 
 rm -f ${NEWROOT}/oldroot/bin/fdisk ${NEWROOT}/oldroot/bin/ip
 rm -f ${NEWROOT}/oldroot/sbin/ethtool ${NEWROOT}/oldroot/sbin/mdadm ${NEWROOT}/oldroot/sbin/start-stop-daemon ${NEWROOT}/oldroot/sbin/uuidgen
 rm -f ${NEWROOT}/oldroot/sbin/flash*  ${NEWROOT}/oldroot/sbin/nand* ${NEWROOT}/oldroot/sbin/ubi*
+
+${SCRIPTDIR}/zy-fw-get-lib ${IRDROOT}
+

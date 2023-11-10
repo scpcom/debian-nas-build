@@ -1,0 +1,41 @@
+#!/bin/sh
+IRDROOT=$1
+NEWROOT=$1/newroot
+
+native_arch=arm-linux-gnu
+foreign_arch=arm-linux-unknown
+native_ld=ld-linux
+foreign_ld=ld-linux-unknown
+
+if [ -e ${NEWROOT}/etc/ld.so.conf.d/arm-linux-gnueabihf.conf ]; then
+  native_arch=arm-linux-gnueabihf
+  foreign_arch=arm-linux-gnueabi
+  native_ld=ld-linux-armhf
+  foreign_ld=ld-linux
+elif [ -e ${NEWROOT}/etc/ld.so.conf.d/arm-linux-gnueabi.conf ]; then
+  native_arch=arm-linux-gnueabi
+  foreign_arch=arm-linux-gnueabihf
+  native_ld=ld-linux
+  foreign_ld=ld-linux-armhf
+fi
+
+native_ld_linux=${native_ld}.so.3
+foreign_ld_linux=${foreign_ld}.so.3
+
+if [ -e ${IRDROOT}/lib/${foreign_ld_linux} -a ! -e ${NEWROOT}/lib/${foreign_ld_linux} -a ! -e ${NEWROOT}/lib/${foreign_arch} ]; then
+  mkdir ${NEWROOT}/lib/${foreign_arch}
+
+  cd ${IRDROOT}/lib/ 
+  tar c ld-* libc.* libc-* libm.* libm-* libblkid.* libmount.* libuuid.* libdl.* libsmartcols.* | tar x -C ${NEWROOT}/lib/${foreign_arch}/
+  cd - > /dev/null
+
+  ln -s ${foreign_arch}/${foreign_ld_linux} ${NEWROOT}/lib/${foreign_ld_linux}
+
+  if [ ! -e ${NEWROOT}/etc/ld.so.conf.d/${foreign_arch}.conf ]; then
+    cp -p ${NEWROOT}/etc/ld.so.conf.d/${native_arch}.conf ${NEWROOT}/etc/ld.so.conf.d/${foreign_arch}.conf
+    sed -i s/${native_arch}/${foreign_arch}/g ${NEWROOT}/etc/ld.so.conf.d/${foreign_arch}.conf
+  fi
+
+  chroot ${NEWROOT}/ ldconfig
+fi
+
