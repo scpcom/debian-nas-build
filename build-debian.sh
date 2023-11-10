@@ -174,8 +174,8 @@ EOM
 
     rm -rf ${MOUNTDIR}/tmp/* ${MOUNTDIR}/var/tmp/*
     if [ ${GB} -eq 2 ]; then
-        sed -i s/'deb-src'/'#deb-src'/g ${MOUNTDIR}/etc/apt/sources.list
-        sed -i s/'deb-src'/'#deb-src'/g ${MOUNTDIR}/etc/apt/sources.list.d/*.list || true
+        sed -i s/'^deb-src'/'#deb-src'/g ${MOUNTDIR}/etc/apt/sources.list
+        sed -i s/'^deb-src'/'#deb-src'/g ${MOUNTDIR}/etc/apt/sources.list.d/*.list || true
     fi
 
     if [ "${boardName}" = "generic" -o "${boardName}" = "mac" -o "${boardName}" = "pc" ]; then
@@ -817,13 +817,17 @@ EOFDRURSLVC
 fi
 
 
-echo "precedence ::ffff:0:0/96  100" | tee -a ${ltspBase}${cpuArch}/etc/gai.conf
+if ! grep -E '^precedence ::ffff:0:0/96  100' ${ltspBase}${cpuArch}/etc/gai.conf > /dev/null ; then
+  echo "precedence ::ffff:0:0/96  100" | tee -a ${ltspBase}${cpuArch}/etc/gai.conf
+fi
 
-cat <<EOFDRUSC | tee -a ${ltspBase}${cpuArch}/etc/sysctl.conf
+if ! grep -E '^net.ipv6.conf.all.disable_ipv6' ${ltspBase}${cpuArch}/etc/sysctl.conf > /dev/null ; then
+  cat <<EOFDRUSC | tee -a ${ltspBase}${cpuArch}/etc/sysctl.conf
 net.ipv6.conf.all.disable_ipv6 = 1
 net.ipv6.conf.default.disable_ipv6 = 1
 net.ipv6.conf.lo.disable_ipv6 = 1
 EOFDRUSC
+fi
 
 
 mkdir -p ${ltspBase}${cpuArch}/etc/tmpfiles.d
