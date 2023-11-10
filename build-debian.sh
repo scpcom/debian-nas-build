@@ -222,6 +222,30 @@ EOM
     umount "${MOUNTDIR}"
     losetup -d "${ROOT_LOOP}"
 
+    DISK_LOOP=/dev/null
+    DISK_LOOP="$(losetup -f --show ${BASEDIR}/${IMAGE})"
+
+    gdisk ${DISK_LOOP} <<EOF
+c
+1
+TC_BOOT
+c
+2
+TC_ROOT
+x
+c
+1
+54cdf5da-deb1-b007-a694-32880502ef34
+c
+2
+54cdf5da-deb1-f007-a694-32880502ef34
+p
+w
+y
+EOF
+
+    losetup -d "${DISK_LOOP}"
+
     if [ $cpuArch != amd64 -a $cpuArch != i386 ]; then
         echo "Creating images/${IMAGE}.gz ......"
         gzip ${BASEDIR}/${IMAGE}
