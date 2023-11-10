@@ -741,7 +741,7 @@ current unpacking process."
     rqd mkdir -p "$ramfs_dir"
     (
         rqd cd "$ramfs_dir"
-        rqd sudo cpio -i -m --no-absolute-filenames -d -u < "../$ramfs_cpio"
+        rqd cpio -i -m --no-absolute-filenames -d -u < "../$ramfs_cpio"
     )
     echo
     echo "Success."

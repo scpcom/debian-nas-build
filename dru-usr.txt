@@ -17,13 +17,13 @@ adminUser=`cat /etc/passwd |grep '501:500' | cut -d ':' -f 1 2>/dev/null`
 adminUser=admin
 usermod -a -G adm,dialout,fax,cdrom,floppy,tape,audio,dip,video,plugdev ${adminUser}
 
-cat /etc/group | grep ssh    >/dev/null && usermod -a -G ssh    ${adminUser}
-cat /etc/group | grep sudo   >/dev/null && usermod -a -G sudo   ${adminUser}
-cat /etc/group | grep games  >/dev/null && usermod -a -G games  ${adminUser}
-cat /etc/group | grep users  >/dev/null && usermod -a -G users  ${adminUser}
+cat /etc/group | grep '^ssh:' >/dev/null && usermod -a -G ssh    ${adminUser}
+cat /etc/group | grep sudo    >/dev/null && usermod -a -G sudo   ${adminUser}
+cat /etc/group | grep games   >/dev/null && usermod -a -G games  ${adminUser}
+cat /etc/group | grep users   >/dev/null && usermod -a -G users  ${adminUser}
 
-cat /etc/group | grep fuse   >/dev/null && usermod -a -G fuse   ${adminUser}
-cat /etc/group | grep netdev >/dev/null && usermod -a -G netdev ${adminUser}
+cat /etc/group | grep fuse    >/dev/null && usermod -a -G fuse   ${adminUser}
+cat /etc/group | grep netdev  >/dev/null && usermod -a -G netdev ${adminUser}
 
 echo "password"
 passwd admin || true

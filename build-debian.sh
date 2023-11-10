@@ -1,6 +1,7 @@
 #!/bin/sh
 ltspBase=./
 cd ${ltspBase} ; ltspBase=`pwd`/ ; cd - > /dev/null
+ltspEtc=${ltspBase}etc/
 
 boardModel=nas540
 FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.20(AATB.0)C0.zip"
@@ -15,6 +16,7 @@ distBrand=Debian
 #distName=stretch
 #distName=buster
 distName=bullseye
+#distName=bookworm
 distURL=http://ftp.us.debian.org/debian
 secuURL=http://security.debian.org
 imageName=debian-nas
@@ -51,26 +53,37 @@ if [ $cpuArch = amd64 -o $cpuArch = i386 ]; then
 fi
 
 distDeb=stretch
+distKeyringFile=release-9.asc
 distOmv=arrakis
 versOmv=4
-if [ ${distName} = bullseye ] ; then
+if [ ${distName} = bookworm ] ; then
+  distDeb=bookworm
+  distKeyringFile=release-12.asc
+  distOmv=shaitan
+  versOmv=7
+elif [ ${distName} = bullseye ] ; then
   distDeb=bullseye
+  distKeyringFile=release-11.asc
   distOmv=shaitan
   versOmv=6
 elif [ ${distName} = buster ] ; then
   distDeb=buster
+  distKeyringFile=release-10.asc
   distOmv=usul
   versOmv=5
 elif [ ${distName} = stretch ] ; then
   distDeb=stretch
+  distKeyringFile=release-9.asc
   distOmv=arrakis
   versOmv=4
 elif [ ${distName} = jessie ] ; then
   distDeb=jessie
+  distKeyringFile=release-8.asc
   distOmv=erasmus
   versOmv=3
 elif [ ${distName} = wheezy ] ; then
   distDeb=wheezy
+  distKeyringFile=release-7.asc
   distOmv=stoneburner
   versOmv=2
 fi
@@ -609,8 +622,13 @@ fi
 if [ ! -e ${ltspBase}${cpuArch}/tmp/debootstrap.done ]; then
   echo " *** debootstrap ..."
 
+  mkdir -p ${ltspBase}etc
+  distKeyringUrl=https://ftp-master.debian.org/keys/${distKeyringFile}
+  #wget -O ${ltspEtc}${distKeyringFile} ${distKeyringUrl}
+  wget ${distKeyringUrl} -qO- | gpg --import --no-default-keyring --keyring ${ltspEtc}${distKeyringFile}.gpg
+
   #--keyring=${ltspEtc}${distKeyringFile}
-  debootstrap --arch ${cpuArch} --foreign --variant=minbase --include=locales ${distName} ${ltspBase}${cpuArch} ${distURL}
+  debootstrap --arch ${cpuArch} --foreign --variant=minbase --include=locales --keyring=${ltspEtc}${distKeyringFile}.gpg ${distName} ${ltspBase}${cpuArch} ${distURL}
 
   cp -p /usr/bin/qemu-arm-static ${ltspBase}${cpuArch}/usr/bin/
 
@@ -644,7 +662,12 @@ deb ${distURL}/ ${distName}-updates ${moreRepo}
 #deb-src ${distURL}/ ${distName}-updates ${moreRepo}
 EOFASLU
 
-if [ $distName != bullseye ]; then
+if [ $distName = bullseye -o $distName = bookworm ]; then
+cat <<EOFASLS | tee -a ${ltspBase}${cpuArch}/etc/apt/sources.list
+deb ${secuURL}/ ${distName}-security main contrib non-free
+#deb-src ${secuURL}/ ${distName}-security main contrib non-free
+EOFASLS
+else
 cat <<EOFASLS | tee -a ${ltspBase}${cpuArch}/etc/apt/sources.list
 deb ${secuURL}/ ${distName}/updates main contrib non-free
 #deb-src ${secuURL}/ ${distName}/updates main contrib non-free
@@ -869,7 +892,7 @@ elif [ -e ${ltspBase}${cpuArch}/bin/systemctl.druic -a -e ${ltspBase}${cpuArch}/
 fi
 
 chroot ${ltspBase}${cpuArch} systemctl enable ssh
-chroot ${ltspBase}${cpuArch} systemctl disable quota
+chroot ${ltspBase}${cpuArch} systemctl disable quota || true
 chroot ${ltspBase}${cpuArch} systemctl disable quotaon
 chroot ${ltspBase}${cpuArch} systemctl disable systemd-quotacheck
 
@@ -909,6 +932,7 @@ for z in `ls ${ltspBase}archives/linux-bsp-*-${cpuArch}.zip` ; do
   fi
   cd - > /dev/null
 
+  sed -i s/'sudo '/''/g ${ltspBase}${cpuArch}/root/board-debs/${zd}/${zs}
   chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/${zs}
 
   cd ${ltspBase}${cpuArch}/root/board-debs
@@ -1264,6 +1288,7 @@ for z in `ls ${ltspBase}kernel/gcc-*-${cpuArch}.zip` ; do
   unzip -o ${z}
   cd - > /dev/null
   chmod ugo+rx ${ltspBase}${cpuArch}/root/board-debs/${zd}/install-${zn}.sh
+  sed -i s/'sudo '/''/g ${ltspBase}${cpuArch}/root/board-debs/${zd}/install-${zn}.sh
   chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/install-${zn}.sh
 
   cd ${ltspBase}${cpuArch}/root/board-debs
@@ -1281,6 +1306,7 @@ for z in `ls ${ltspBase}kernel/linux-tools-*-${cpuArch}.zip` ; do
   cd ${ltspBase}${cpuArch}/root/board-debs/${zd}
   unzip -o ${z}
   cd - > /dev/null
+  sed -i s/'sudo '/''/g ${ltspBase}${cpuArch}/root/board-debs/${zd}/install-kbuild.sh
   chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/install-kbuild.sh
 
   cd ${ltspBase}${cpuArch}/root/board-debs
@@ -1305,9 +1331,10 @@ for z in `ls ${ltspBase}kernel/linux-image-*-${cpuArch}.zip` ; do
       cp -p $k ${ltspBase}${cpuArch}/root/board-debs/${zd}/
     fi
   done
+  sed -i s/'sudo '/''/g ${ltspBase}${cpuArch}/root/board-debs/${zd}/install-linux.sh
   echo "#!/bin/sh"> ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
   echo "cd /root/board-debs/${zd}/" >> ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
-  echo "/root/board-debs/${zd}/install-linux.sh" >> ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
+  echo "bash -e /root/board-debs/${zd}/install-linux.sh" >> ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
   chmod ugo+rx ${ltspBase}${cpuArch}/root/board-debs/${zd}/do-install-linux.sh
   chroot ${ltspBase}${cpuArch} /root/board-debs/${zd}/do-install-linux.sh
 
