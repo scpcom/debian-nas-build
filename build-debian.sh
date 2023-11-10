@@ -13,7 +13,8 @@ distBrand=Debian
 #distName=wheezy
 #distName=jessie
 #distName=stretch
-distName=buster
+#distName=buster
+distName=bullseye
 distURL=http://ftp.us.debian.org/debian
 secuURL=http://security.debian.org
 imageName=debian-nas
@@ -642,10 +643,12 @@ deb ${distURL}/ ${distName}-updates ${moreRepo}
 #deb-src ${distURL}/ ${distName}-updates ${moreRepo}
 EOFASLU
 
+if [ $distName != bullseye ]; then
 cat <<EOFASLS | tee -a ${ltspBase}${cpuArch}/etc/apt/sources.list
 deb ${secuURL}/ ${distName}/updates main contrib non-free
 #deb-src ${secuURL}/ ${distName}/updates main contrib non-free
 EOFASLS
+fi
 
 touch ${ltspBase}${cpuArch}/tmp/repositories.done
 
@@ -788,6 +791,8 @@ cp ${ltspBase}dru-omv.txt ${ltspBase}${cpuArch}/root/bin/dru-omv.sh
 chmod ugo+rx ${ltspBase}${cpuArch}/root/bin/dru-omv.sh
 cp ${ltspBase}dru-usr.txt ${ltspBase}${cpuArch}/root/bin/dru-usr.sh
 chmod ugo+rx ${ltspBase}${cpuArch}/root/bin/dru-usr.sh
+#cp ${ltspBase}dru-post.txt ${ltspBase}${cpuArch}/root/bin/dru-post.sh
+#chmod ugo+rx ${ltspBase}${cpuArch}/root/bin/dru-post.sh
 
 mkdir -p ${ltspBase}${cpuArch}/root/source
 cp -p ${ltspBase}archives/openmediavault-init-scripts.tar.gz ${ltspBase}${cpuArch}/root/source/

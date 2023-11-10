@@ -9,8 +9,9 @@ fi
 echo " *** omv essential packages ..."
 
 apt-get install -y \
-  apt-transport-https beep btrfs-tools gdisk ifenslave jfsutils ntfs-3g pm-utils \
+  apt-transport-https beep gdisk ifenslave jfsutils ntfs-3g pm-utils \
   quota quotatool rrdtool socat uuid wpasupplicant xfsprogs xmlstarlet
+apt-get install -y btrfs-tools || apt-get install -y btrfs-progs
 
 # not in stretch
 apt-get install -y openssh-blacklist-extra || true
@@ -26,6 +27,10 @@ apt-get install -y php5-cgi php5-cli || apt-get install -y php-cgi php-cli
 
 # not in wheezy
 apt-get install -y python3-dialog python3-natsort python3-netifaces
+
+if [ -e /usr/lib/python3 -a ! -e /lib/python3 ]; then
+  ln -s /usr/lib/python3 /lib/python3
+fi
 
 #apt-get install -y default-jre-headless
 
@@ -114,11 +119,13 @@ if [ ! -e /etc/apt/sources.list.d/openmediavault.list ]; then
   apt-get update
 fi
 
-apt-get install -y libjs-extjs5 || apt-get install -y libjs-extjs6
+apt-get install -y libjs-extjs5 || apt-get install -y libjs-extjs6 || true
 # not in stretch
 apt-get install -y php5-pam || apt-get install -y php-pam
 
 #apt-get install -y proftpd-mod-vroot
+
+apt-get install -y wsdd || true
 
 apt-get clean
 
@@ -176,6 +183,7 @@ else
   apt-get install -y systemd-sysv
 fi
 
+nnp=false
 for f in `grep 'NoNewPrivileges=yes' /lib/systemd/system/*.service | cut -d ':' -f 1` ; do
   l=`readlink $f || true`
   b=`basename $f`
@@ -185,6 +193,22 @@ for f in `grep 'NoNewPrivileges=yes' /lib/systemd/system/*.service | cut -d ':' 
     mkdir $e
     echo "[Service]" > ${e}/privileges.conf
     echo "NoNewPrivileges=no" >> ${e}/privileges.conf
+  fi
+  nnp=true
+done
+
+for s in wsdd ; do
+  f=/lib/systemd/system/${s}.service
+  if [ $nnp = true -a -e $f ]; then
+    l=`readlink $f || true`
+    b=`basename $f`
+    e=/etc/systemd/system/${b}.d
+    if [ "X${l}" = "X" -a ! -e ${e}/privileges.conf ]; then
+      echo $e
+      mkdir $e
+      echo "[Service]" > ${e}/privileges.conf
+      echo "NoNewPrivileges=no" >> ${e}/privileges.conf
+    fi
   fi
 done
 
@@ -253,6 +277,7 @@ chmod ugo+rx /usr/local/bin/dru-omv-patch
 
 if [ -e /etc/default/chrony ]; then
   sed -i s/'-F -1'/'-F 0'/g /etc/default/chrony
+  sed -i s/'-F 1"'/'-F 0"'/g /etc/default/chrony
 fi
 
 if [ -e /usr/sbin/invoke-rc.d.distrib ]; then
