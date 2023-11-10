@@ -147,7 +147,7 @@ sed -i s/'"UID_MIN", 1000'/'"UID_MIN", 502'/g /usr/share/php/openmediavault/syst
 sed -i s/'"GID_MIN", 1000'/'"GID_MIN", 500'/g /usr/share/php/openmediavault/system/group.inc
 sed -i s/'eth|venet'/'eth|egiga|venet'/g /usr/share/php/openmediavault/system/net/networkinterfacebackend/ethernet.inc
 
-sed -i s/'$this->getCanonicalDeviceFile()'/'$this->getDeviceFile()'/g /usr/share/php/openmediavault/system/filesystem/filesystem.inc
+#sed -i s/'$this->getCanonicalDeviceFile()'/'$this->getDeviceFile()'/g /usr/share/php/openmediavault/system/filesystem/filesystem.inc
 
 sed -i 's|OMV_MOUNT_DIR="/srv"|OMV_MOUNT_DIR="/media"|g' /etc/default/openmediavault
 EOFDRUOMVP
