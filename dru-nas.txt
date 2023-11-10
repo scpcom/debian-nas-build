@@ -255,6 +255,9 @@ apt-get install -y fake-hwclock i2c-tools mtd-utils uuid-runtime
 [ ! -e /sbin/nanddump       ] && ln -s `which nanddump`       /sbin/nanddump
 [ ! -e /sbin/nandwrite      ] && ln -s `which nandwrite`      /sbin/nandwrite
 
+[ ! -e /sbin/i2cget ] && ln -s `which i2cget` /sbin/i2cget
+[ ! -e /sbin/i2cset ] && ln -s `which i2cset` /sbin/i2cset
+
 dit=/var/lib/dkms/iscsitarget/1.4.20.3+svn502
 if [ ! -e ${dit} ]; then
   apt-get install -y iscsitarget-dkms

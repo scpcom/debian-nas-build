@@ -3,7 +3,8 @@ ltspBase=./
 cd ${ltspBase} ; ltspBase=`pwd`/ ; cd - > /dev/null
 
 boardModel=nas540
-FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.11(AATB.3)C0.zip"
+FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.20(AATB.0)C0.zip"
+FWUSEVER=newer
 fanSpeed=keep
 
 boardName=nas
@@ -217,6 +218,12 @@ EOM
     if [ ${cpuArch} != powerpc ] ; then
         umount "${MOUNTDIR}/boot"
         losetup -d "${BOOT_LOOP}"
+
+        if cp -p $R/boot/vmlinuz-* "${MOUNTDIR}/boot/" ; then
+          cp -p $R/boot/config-*     "${MOUNTDIR}/boot/"
+          cp -p $R/boot/initrd.img-* "${MOUNTDIR}/boot/"        
+          cp -p $R/boot/System.map-* "${MOUNTDIR}/boot/"
+        fi
     fi
 
     umount "${MOUNTDIR}"
@@ -289,6 +296,10 @@ boardModelEOL=nsa310a
 
 if [ "x$BMODEL" = "xold" ]; then
 	BMODEL=$(whiptail --default-item ${boardModelEOL} --title "Image Creator Firmware Extraction" --cancel-button "Quit" --ok-button "Select" --menu "Which firmware would you like to use to get tools?" 18 72 10 \
+	    "nsa210" "Zyxel NSA210" \
+	    "nsa220p" "Zyxel NSA220Plus" \
+	    "nsa221" "Zyxel NSA221" \
+	    "nsa2401" "Zyxel NSA2401" \
 	    "nsa310a" "Zyxel NSA310" \
 	    3>&1 1>&2 2>&3)
 fi
@@ -301,6 +312,42 @@ fi
 if [ ! -z $BMODEL ]; then
 	boardModel=${BMODEL}
 fi
+
+FWOLDVER="5.11"
+case ${boardModel} in
+    nsa210)  FWOLDVER="4.23" ;;
+    nsa220p) FWOLDVER="3.23" ;;
+    nsa221)  FWOLDVER="4.41" ;;
+    nsa2401) FWOLDVER="1.11" ;;
+    nsa310a) FWOLDVER="4.22" ;;
+    nsa310s) FWOLDVER="4.75(AALH.0)" ;;
+    nsa320s) FWOLDVER="4.75(AANV.0)" ;;
+    nsa325)  FWOLDVER="4.80" ;;
+esac
+
+FWNEWVER="5.20"
+case ${boardModel} in
+    nsa210)  FWNEWVER="4.41" ;;
+    nsa220p) FWNEWVER="3.25" ;;
+    nsa221)  FWNEWVER="4.41" ;;
+    nsa2401) FWNEWVER="1.20" ;;
+    nsa310a) FWNEWVER="4.40" ;;
+    nsa310s) FWNEWVER="4.75(AALH.1)" ;;
+    nsa320s) FWNEWVER="4.75(AANV.1)" ;;
+    nsa325)  FWNEWVER="4.81" ;;
+esac
+
+if [ "${boardModel}" != "onboot" -a "${boardModel}" != "nas5xx" ]; then
+  BFWUSEVER=$(whiptail --default-item ${FWUSEVER} --title "Image Creator Firmware Extraction" --cancel-button "Quit" --ok-button "Select" --menu "Which firmware version would you like to download?" 18 72 10 \
+    "older" "V${FWOLDVER}" \
+    "newer" "V${FWNEWVER}" \
+    3>&1 1>&2 2>&3)
+
+  if [ ! -z $BFWUSEVER ]; then
+  	FWUSEVER=${BFWUSEVER}
+  fi
+fi
+
 
 
 FSPEED=$(whiptail --default-item ${fanSpeed} --title "Image Creator Fan Speed" --cancel-button "Quit" --ok-button "Select" --menu "Which fan speed should be set on boot (NAS5xx only)?" 18 72 10 \
@@ -888,6 +935,8 @@ EOFDRURCLZ
 echo "exit 0" >>  ${ltspBase}${cpuArch}/etc/rc.local
 
 
+sed -i s/'#disallow-other-stacks=no'/'disallow-other-stacks=yes'/g ${ltspBase}${cpuArch}/etc/avahi/avahi-daemon.conf
+
 #sed -i 's|dir = "/dev"|dir = "/dev/mapper"|g' ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
 
 #sed -i s/'use_lvmetad = 0'/'use_lvmetad = 1'/g ${ltspBase}${cpuArch}/etc/lvm/lvm.conf
@@ -906,18 +955,41 @@ cp -p ${ltspBase}scripts/repack-zImage.sh ${ltspBase}${cpuArch}/usr/local/bin/
 cp -p ${ltspBase}scripts/zy-fw-get-bin    ${ltspBase}${cpuArch}/usr/local/bin/
 cp -p ${ltspBase}scripts/zy-fw-get-lib    ${ltspBase}${cpuArch}/usr/local/bin/
 
-case ${boardModel} in
-    nsa310a) FWGETURL="ftp://ftp.zyxel.com/NSA310a/firmware/NSA310_4.40(AFK.0)C0.zip" ;;
-    nsa310s) FWGETURL="ftp://ftp.zyxel.com/NSA310S/firmware/NSA310S_V4.75(AALH.1)C0.zip" ;;
-    nsa320s) FWGETURL="ftp://ftp.zyxel.com/NSA320S/firmware/NSA320S_V4.75(AANV.1)C0.zip" ;;
-    nsa325)  FWGETURL="ftp://ftp.zyxel.com/NSA325/firmware/NSA325_V4.81(AAAJ.0)C0.zip" ;;
+if [ $FWUSEVER = older ]; then
+  case ${boardModel} in
+    nsa210)  FWGETURL="ftp://ftp.zyxel.com/NSA210/firmware/old_version/NSA210_4.23(AFD.1)C0.zip" ;;
+    nsa220p) FWGETURL="ftp://ftp.zyxel.com/NSA-220_Plus/firmware/NSA-220%20Plus_3.23(AFG.0)C0.zip" ;;
+    nsa221)  FWGETURL="ftp://ftp.zyxel.com/NSA221/firmware/NSA221_V4.41(AFM.1)C0.zip" ;;
+    nsa2401) FWGETURL="ftp://ftp.zyxel.com/NSA-2401/firmware/NSA-2401_1.11(AFF.0)C0.zip" ;;
+    nsa310a) FWGETURL="ftp://ftp.zyxel.com/NSA310a/firmware/NSA310_4.22(AFK.1)C0.zip" ;;
+    nsa310s) FWGETURL="ftp://ftp.zyxel.com/NSA310S/firmware/NSA310S_4.75(AALH.0)C0.zip" ;;
+    nsa320s) FWGETURL="ftp://ftp.zyxel.com/NSA320S/firmware/NSA320S_V4.75(AANV.0)C0.zip" ;;
+    nsa325)  FWGETURL="ftp://ftp.zyxel.com/NSA325/firmware/NSA325_V4.80(AAAJ.1)C0.zip" ;;
     nas326)  FWGETURL="ftp://ftp.zyxel.com/NAS326/firmware/NAS326_V5.11(AAZF.4)C0.zip" ;;
     nas520)  FWGETURL="ftp://ftp.zyxel.com/NAS520/firmware/NAS520_V5.11(AASZ.3)C0.zip" ;;
     nas540)  FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.11(AATB.3)C0.zip" ;;
     nas542)  FWGETURL="ftp://ftp.zyxel.com/NAS542/firmware/NAS542_V5.11(ABAG.3)C0.zip" ;;
-esac
+  esac
+else
+  case ${boardModel} in
+    nsa210)  FWGETURL="ftp://ftp.zyxel.com/NSA210/firmware/NSA210_4.41(AFD.0)C0.zip" ;;
+    nsa220p) FWGETURL="ftp://ftp.zyxel.com/NSA-220_Plus/firmware/NSA-220%20Plus_3.25(AFG.0)C0.zip" ;;
+    nsa221)  FWGETURL="ftp://ftp.zyxel.com/NSA221/firmware/NSA221_V4.41(AFM.1)C0.zip" ;;
+    nsa2401) FWGETURL="ftp://ftp.zyxel.com/NSA-2401/firmware/NSA-2401_1.20(AFF.0)C0.zip" ;;
+    nsa310a) FWGETURL="ftp://ftp.zyxel.com/NSA310a/firmware/NSA310_4.40(AFK.0)C0.zip" ;;
+    nsa310s) FWGETURL="ftp://ftp.zyxel.com/NSA310S/firmware/NSA310S_V4.75(AALH.1)C0.zip" ;;
+    nsa320s) FWGETURL="ftp://ftp.zyxel.com/NSA320S/firmware/NSA320S_V4.75(AANV.1)C0.zip" ;;
+    nsa325)  FWGETURL="ftp://ftp.zyxel.com/NSA325/firmware/NSA325_V4.81(AAAJ.0)C0.zip" ;;
+    nas326)  FWGETURL="ftp://ftp.zyxel.com/NAS326/firmware/NAS326_V5.20(AAZF.1)C0.zip" ;;
+    nas520)  FWGETURL="ftp://ftp.zyxel.com/NAS520/firmware/NAS520_V5.20(AASZ.0)C0.zip" ;;
+    nas540)  FWGETURL="ftp://ftp.zyxel.com/NAS540/firmware/NAS540_V5.20(AATB.0)C0.zip" ;;
+    nas542)  FWGETURL="ftp://ftp.zyxel.com/NAS542/firmware/NAS542_V5.20(ABAG.1)C0.zip" ;;
+  esac
+fi
 
-if [ "${boardModel}" != "onboot" ]; then
+if [ "${boardModel}" = "onboot" ]; then
+  FWGETURL="file://onboot"
+else
   ${ltspBase}scripts/zy-fw-extract - ${ltspBase}fw "${FWGETURL}"
 fi
 
@@ -1099,6 +1171,7 @@ firstUser=`cat ${ltspBase}${cpuArch}/etc/passwd |grep '504:500' | cut -d ':' -f 
 cat <<EOFDRUBCF | tee ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf
 boardModel=${boardModel}
 FWGETURL="${FWGETURL}"
+FWUSEVER="${FWUSEVER}"
 fanSpeed=${fanSpeed}
 firstUser=${firstUser}
 imageMdMount=${imageMdMount}

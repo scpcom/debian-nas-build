@@ -56,6 +56,7 @@ cp -p ${IRDROOT}/firmware/sbin/mmiotool   ${NEWROOT}/sbin/
 cp -p ${IRDROOT}/sbin/buzzerc   ${NEWROOT}/sbin/
 cp -p ${IRDROOT}/sbin/setLED    ${NEWROOT}/sbin/
 cp -p ${IRDROOT}/sbin/getLED    ${NEWROOT}/sbin/
+cp -p ${IRDROOT}/sbin/rtcAccess ${NEWROOT}/sbin/
 cp -p ${IRDROOT}/sbin/get_mac_mcu.sh   ${NEWROOT}/sbin/
 cp -p ${IRDROOT}/sbin/write_mac_mcu.sh ${NEWROOT}/sbin/
 #cp -p ${IRDROOT}/sbin/egiga_*.sh       ${NEWROOT}/sbin/
