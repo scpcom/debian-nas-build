@@ -449,7 +449,8 @@ fi
 
 
 echo " *** install packages on build host ..."
-apt-get install -y debootstrap qemu-user-static binfmt-support whiptail dosfstools rsync patch python-minimal
+apt-get install -y debootstrap qemu-user-static binfmt-support whiptail dosfstools rsync patch
+apt-get install -y python-minimal || apt-get install -y python2-minimal
 
 [ -e ${ltspBase}etc/${distBrandLower}-build.conf ] && . ${ltspBase}etc/${distBrandLower}-build.conf
 [ -e ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf ] && . ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf
@@ -861,6 +862,10 @@ if [ "${cpuArch:0:3}" != "arm" ]; then
 elif [ -e ${ltspBase}${cpuArch}/bin/systemctl.druic -a -e ${ltspBase}${cpuArch}/bin/systemctl.distrib ]; then
   chroot ${ltspBase}${cpuArch} rm /bin/systemctl
   chroot ${ltspBase}${cpuArch} dpkg-divert --local --rename --remove /bin/systemctl
+  if [ -e ${ltspBase}${cpuArch}/bin/logger.distrib ]; then
+    chroot ${ltspBase}${cpuArch} rm /bin/logger
+    chroot ${ltspBase}${cpuArch} dpkg-divert --local --rename --remove /bin/logger
+  fi
 fi
 
 chroot ${ltspBase}${cpuArch} systemctl enable ssh
@@ -1361,12 +1366,22 @@ if [ ${imageOmv} = true ]; then
   fi
 
 omvprfx=openmediavault-${versOmv}
+omvpkgv=`chroot ${ltspBase}${cpuArch} dpkg -s openmediavault | grep -E '^Version: ' | cut -d ' ' -f 2 | cut -d '.' -f 1-2`
 
   for f in ${ltspBase}archives/*${omvprfx}*-root*.tar.gz ; do
     tar xzvf $f
   done
 
-  for f in ${ltspBase}archives/*${omvprfx}*.patch ; do
+  for p in ${ltspBase}archives/*${omvprfx}*.patch ; do
+    f=`echo $p | sed s/-${versOmv}'\..\.'/-${omvpkgv}'.'/g`
+    echo try $f
+    if [ ! -e $f ]; then
+      f=`echo $p | sed s/-${versOmv}'\..\.'/-${versOmv}'.0.'/g`
+    fi
+    if [ ! -e $f ]; then
+      f=$p
+    fi
+    echo $f
     s=${ltspBase}${cpuArch}/tmp/`basename $f`.done
     if [ ! -e $s ]; then
       patch -p1 < $f
@@ -1445,12 +1460,22 @@ fi
 if [ "${cpuArch:0:3}" != "arm" ]; then
   true
 elif [ -e ${ltspBase}${cpuArch}/bin/systemctl.druic -a ! -e ${ltspBase}${cpuArch}/bin/systemctl.distrib ]; then
+  chroot ${ltspBase}${cpuArch} mount /proc || true
+  echo enable zy-stop
   chroot ${ltspBase}${cpuArch} systemctl enable zy-stop
   if [ -e ${ltspBase}${cpuArch}/lib/systemd/system/zy-fanctrl.timer ]; then
+    echo enable zy-fanctrl.timer
     chroot ${ltspBase}${cpuArch} systemctl enable zy-fanctrl.timer
   fi
+  chroot ${ltspBase}${cpuArch} umount /proc
+  echo divert systemctl
   chroot ${ltspBase}${cpuArch} dpkg-divert --local --rename --add /bin/systemctl
   chroot ${ltspBase}${cpuArch} ln -s /bin/systemctl.druic /bin/systemctl
+  if [ ! -e ${ltspBase}${cpuArch}/bin/logger.distrib ]; then
+    echo divert logger
+    chroot ${ltspBase}${cpuArch} dpkg-divert --local --rename --add /bin/logger
+    chroot ${ltspBase}${cpuArch} ln -s /bin/true /bin/logger
+  fi
 fi
 
 

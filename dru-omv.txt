@@ -158,6 +158,8 @@ if [ "x$n" = "xsystemctl" ]; then
    if [ -e "/etc/init.d/${d}" ]; then
      /usr/sbin/update-rc.d ${d} remove
    fi
+ elif [ "x$1" = "x--version" ]; then
+   $0.distrib $1
  fi
 elif [ "x$n" = "xrunlevel" ]; then
   if [ -e /tmp/.dru-boot.done ]; then

@@ -1,0 +1,15 @@
+--- a/usr/share/php/openmediavault/system/storage/smartinformation.inc	2023-09-10 21:20:24.096781279 +0200
++++ b/usr/share/php/openmediavault/system/storage/smartinformation.inc	2023-09-10 21:33:15.078035485 +0200
+@@ -133,9 +133,9 @@
+ 		// Bit 0: Command line did not parse
+ 		// Bit 1: Device open failed, or device did not return an
+ 		//        IDENTIFY DEVICE structure
+-		if (($exitStatus !== 0) && (($exitStatus & 0) || ($exitStatus & 1))) {
+-			throw new \OMV\ExecException($cmd, $output, $exitStatus);
+-		}
++		//if (($exitStatus !== 0) && (($exitStatus & 0) || ($exitStatus & 1))) {
++		//	throw new \OMV\ExecException($cmd, $output, $exitStatus);
++		//}
+ 		$this->cmdOutput = $output;
+ 
+ 		// Set flag to mark information has been successfully read.
