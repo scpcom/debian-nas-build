@@ -462,8 +462,8 @@ fi
 
 
 echo " *** install packages on build host ..."
-apt-get install -y debootstrap qemu-user-static binfmt-support whiptail dosfstools rsync patch
-apt-get install -y python-minimal || apt-get install -y python2-minimal
+apt-get install -y debootstrap gdisk qemu-user-static binfmt-support whiptail dosfstools rsync patch
+apt-get install -y python-minimal || apt-get install -y python2-minimal || apt-get install -y python3-minimal
 
 [ -e ${ltspBase}etc/${distBrandLower}-build.conf ] && . ${ltspBase}etc/${distBrandLower}-build.conf
 [ -e ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf ] && . ${ltspBase}${cpuArch}/etc/${distBrandLower}-build.conf
